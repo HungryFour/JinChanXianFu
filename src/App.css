@@ -1,0 +1,404 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════
+   金蟾 · 仙侠交易殿 — 东方仙侠 RPG Theme
+   ═══════════════════════════════════════ */
+
+:root {
+  /* ── Abyss Backgrounds ── */
+  --bg-abyss: #080610;
+  --bg-deep: #0d0a18;
+  --bg-panel: #120e22;
+  --bg-card: #181330;
+  --bg-input: #1c1635;
+  --bg-hover: #221a40;
+  --bg-active: #281f4a;
+
+  /* ── Borders ── */
+  --border-dark: #261f42;
+  --border-mid: #362d58;
+  --border-gold: #c9a34f;
+  --border-gold-dim: #6b5a2e;
+  --border-gold-faint: #3d3220;
+
+  /* ── Imperial Gold ── */
+  --gold-50: #fdf6e3;
+  --gold-100: #f5e6c8;
+  --gold-200: #e8cc8a;
+  --gold-300: #d4a574;
+  --gold-400: #c9a34f;
+  --gold-500: #b08a2e;
+  --gold-glow: rgba(201, 163, 79, 0.12);
+  --gold-glow-strong: rgba(201, 163, 79, 0.25);
+
+  /* ── Jade Green ── */
+  --jade-400: #4a9070;
+  --jade-500: #3a7a5a;
+  --jade-glow: rgba(74, 144, 112, 0.18);
+
+  /* ── Cinnabar Red ── */
+  --cinnabar-400: #d44040;
+  --cinnabar-500: #b83030;
+
+  /* ── Amber ── */
+  --amber-400: #d4a030;
+  --amber-glow: rgba(212, 160, 48, 0.18);
+
+  /* ── Mystic Blue ── */
+  --mystic-400: #5a8ad4;
+  --mystic-glow: rgba(90, 138, 212, 0.15);
+
+  /* ── Text ── */
+  --text-primary: #ede4d3;
+  --text-secondary: #a89880;
+  --text-dim: #6b5f4a;
+  --text-gold: #d4b074;
+  --text-jade: #6abf90;
+
+  /* ── Typography ── */
+  --font-display: 'ZCOOL XiaoWei', 'STKaiti', 'KaiTi', serif;
+  --font-calligraphy: 'Ma Shan Zheng', 'STXingkai', cursive;
+  --font-body: 'Noto Serif SC', 'Songti SC', 'STSongti', 'SimSun', serif;
+  --font-mono: 'Menlo', 'Consolas', monospace;
+}
+
+/* ── Base ── */
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--font-body);
+  background: var(--bg-abyss);
+  color: var(--text-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Atmospheric Background ── */
+.bg-realm {
+  background:
+    radial-gradient(ellipse at 15% 50%, rgba(74, 144, 112, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 20%, rgba(201, 163, 79, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(90, 70, 160, 0.04) 0%, transparent 40%),
+    var(--bg-abyss);
+}
+
+/* ── Gold Shimmer Text ── */
+@keyframes shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--gold-300) 0%,
+    var(--gold-50) 30%,
+    var(--gold-400) 50%,
+    var(--gold-50) 70%,
+    var(--gold-300) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 5s ease-in-out infinite;
+}
+
+/* ── Floating Gold Particles ── */
+@keyframes float-up {
+  0% {
+    transform: translateY(0) translateX(0) scale(0);
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.7;
+    transform: translateY(-5vh) translateX(0) scale(1);
+  }
+  95% {
+    opacity: 0.15;
+  }
+  100% {
+    transform: translateY(-105vh) translateX(40px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.particle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--gold-400);
+  box-shadow: 0 0 6px var(--gold-glow-strong);
+  animation: float-up var(--dur) linear infinite;
+  animation-delay: var(--del);
+  left: var(--x);
+  bottom: -10px;
+  z-index: 0;
+}
+
+/* ── Ornate Corner Decorations ── */
+.ornate-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-style: solid;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.ornate-corner[data-pos="tl"] { top: 4px; left: 4px; border-width: 1.5px 0 0 1.5px; border-color: var(--border-gold); }
+.ornate-corner[data-pos="tr"] { top: 4px; right: 4px; border-width: 1.5px 1.5px 0 0; border-color: var(--border-gold); }
+.ornate-corner[data-pos="bl"] { bottom: 4px; left: 4px; border-width: 0 0 1.5px 1.5px; border-color: var(--border-gold); }
+.ornate-corner[data-pos="br"] { bottom: 4px; right: 4px; border-width: 0 1.5px 1.5px 0; border-color: var(--border-gold); }
+
+/* ── Decorative Separator ── */
+.separator-ornate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+}
+.separator-ornate::before,
+.separator-ornate::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-gold-dim), transparent);
+}
+
+/* ── Animated Status Dots ── */
+@keyframes pulse-jade {
+  0%, 100% { box-shadow: 0 0 3px var(--jade-glow); }
+  50% { box-shadow: 0 0 8px var(--jade-400), 0 0 14px var(--jade-glow); }
+}
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 3px var(--amber-glow); }
+  50% { box-shadow: 0 0 8px var(--amber-400), 0 0 14px var(--amber-glow); }
+}
+@keyframes pulse-gold {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ── Message Animations ── */
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Toad Breathing Glow ── */
+@keyframes toad-breathe {
+  0%, 100% {
+    box-shadow: 0 0 12px var(--gold-glow), 0 0 24px rgba(201, 163, 79, 0.06);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--gold-glow-strong), 0 0 40px rgba(201, 163, 79, 0.1);
+  }
+}
+@keyframes toad-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ── Cursor Blink ── */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ── Top Decorative Line ── */
+.top-golden-line {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border-gold-faint) 15%,
+    var(--border-gold-dim) 40%,
+    var(--border-gold) 50%,
+    var(--border-gold-dim) 60%,
+    var(--border-gold-faint) 85%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+/* ── Task Item ── */
+.task-item {
+  transition: all 0.2s ease;
+  border-left: 2px solid transparent;
+}
+.task-item:hover {
+  border-left-color: var(--border-gold-dim);
+  background: var(--bg-hover);
+}
+.task-item.active {
+  border-left-color: var(--gold-400);
+  background: var(--bg-active);
+}
+
+/* ── Input Game Style ── */
+.input-realm {
+  background: var(--bg-input);
+  border: 1px solid var(--border-dark);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  transition: all 0.25s ease;
+}
+.input-realm::placeholder {
+  color: var(--text-dim);
+}
+.input-realm:focus {
+  outline: none;
+  border-color: var(--border-gold-dim);
+  box-shadow: 0 0 0 1px var(--gold-glow), inset 0 0 20px rgba(201, 163, 79, 0.03);
+}
+
+/* ── Button Game Style ── */
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold-500), var(--gold-400));
+  color: var(--bg-abyss);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+.btn-gold:hover {
+  background: linear-gradient(135deg, var(--gold-400), var(--gold-300));
+  box-shadow: 0 0 20px var(--gold-glow-strong);
+}
+.btn-gold:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-outline-gold {
+  background: transparent;
+  border: 1px solid var(--border-gold-dim);
+  color: var(--text-gold);
+  font-family: var(--font-display);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.btn-outline-gold:hover {
+  border-color: var(--gold-400);
+  background: rgba(201, 163, 79, 0.06);
+  box-shadow: 0 0 12px var(--gold-glow);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-gold-dim);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-400);
+}
+
+/* ── Markdown Prose Overrides ── */
+.prose {
+  --tw-prose-body: var(--text-primary);
+  --tw-prose-headings: var(--text-gold);
+  --tw-prose-links: var(--gold-300);
+  --tw-prose-bold: var(--gold-100);
+  --tw-prose-code: var(--gold-200);
+  --tw-prose-quotes: var(--text-secondary);
+}
+.prose pre {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-dark);
+  border-radius: 0.5rem;
+}
+.prose code {
+  color: var(--gold-200);
+  font-size: 0.85em;
+  font-family: var(--font-mono);
+}
+.prose pre code {
+  color: var(--text-primary);
+}
+.prose table {
+  border-collapse: collapse;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--border-dark);
+  padding: 0.5rem 0.75rem;
+}
+.prose th {
+  background: var(--bg-panel);
+  color: var(--text-gold);
+  font-family: var(--font-display);
+}
+.prose a {
+  color: var(--gold-300);
+  text-decoration-color: var(--border-gold-dim);
+}
+.prose a:hover {
+  color: var(--gold-200);
+}
+.prose blockquote {
+  border-left-color: var(--border-gold-dim);
+  color: var(--text-secondary);
+}
+.prose strong {
+  color: var(--gold-100);
+}
+.prose hr {
+  border-color: var(--border-dark);
+}
+
+/* ── Noise Texture Overlay ── */
+.noise-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.015;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ── Modal Backdrop ── */
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Welcome Page Stagger ── */
+@keyframes welcome-emblem {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes welcome-title {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes welcome-subtitle {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes welcome-input {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
