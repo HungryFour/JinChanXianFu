@@ -1,13 +1,16 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
-import type { Task, Message } from '../types/chat';
+import type { Task, Message, AgentPlan } from '../types/chat';
+import type { ToolExecution } from '../types/ai';
 
 interface ChatState {
   tasks: Task[];
   activeTaskId: string | null;
+  activeTaskPlan: AgentPlan | null;
   messages: Message[];
   isStreaming: boolean;
   streamingContent: string;
+  toolExecutions: ToolExecution[];
 
   loadTasks: () => Promise<void>;
   createTask: (title: string, taskType?: string) => Promise<Task>;
@@ -20,18 +23,24 @@ interface ChatState {
     content: string,
     modelUsed?: string,
     triggerSource?: string,
+    imagePaths?: string[],
   ) => Promise<Message>;
   setStreaming: (streaming: boolean) => void;
   setStreamingContent: (content: string) => void;
   appendStreamingContent: (chunk: string) => void;
+  addToolExecution: (execution: ToolExecution) => void;
+  updateToolExecution: (id: string, updates: Partial<ToolExecution>) => void;
+  clearToolExecutions: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   tasks: [],
   activeTaskId: null,
+  activeTaskPlan: null,
   messages: [],
   isStreaming: false,
   streamingContent: '',
+  toolExecutions: [],
 
   loadTasks: async () => {
     try {
@@ -69,7 +78,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setActiveTask: async (id: string | null) => {
-    set({ activeTaskId: id, messages: [] });
+    let plan: AgentPlan | null = null;
+    if (id) {
+      const task = get().tasks.find((t) => t.id === id);
+      if (task?.agent_plan) {
+        try { plan = JSON.parse(task.agent_plan); } catch { /* skip */ }
+      }
+    }
+    set({ activeTaskId: id, activeTaskPlan: plan, messages: [] });
     if (id) {
       await get().loadMessages(id);
     }
@@ -86,14 +102,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  addMessage: async (taskId, role, content, modelUsed, triggerSource) => {
+  addMessage: async (taskId, role, content, modelUsed, triggerSource, imagePaths) => {
     const message = await invoke<Message>('create_message', {
       request: {
         task_id: taskId,
         role,
         content,
         model_used: modelUsed || null,
-        image_paths: null,
+        image_paths: imagePaths ? JSON.stringify(imagePaths) : null,
         trigger_source: triggerSource || 'manual',
       },
     });
@@ -109,4 +125,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   appendStreamingContent: (chunk) =>
     set((state) => ({ streamingContent: state.streamingContent + chunk })),
+
+  addToolExecution: (execution) =>
+    set((state) => ({
+      toolExecutions: [...state.toolExecutions, execution],
+    })),
+
+  updateToolExecution: (id, updates) =>
+    set((state) => ({
+      toolExecutions: state.toolExecutions.map((te) =>
+        te.id === id ? { ...te, ...updates } : te,
+      ),
+    })),
+
+  clearToolExecutions: () => set({ toolExecutions: [] }),
 }));

@@ -4,6 +4,7 @@ import { ChatPanel } from './components/chat/ChatPanel';
 import { SettingsPanel } from './components/settings/SettingsPanel';
 import { useSettingsStore } from './stores/settingsStore';
 import { useChatStore } from './stores/chatStore';
+import { startHeartbeat, stopHeartbeat } from './services/agent/heartbeat';
 
 function GoldParticles() {
   const particles = useMemo(
@@ -57,6 +58,8 @@ function App() {
   useEffect(() => {
     initSettings();
     loadTasks();
+    startHeartbeat();
+    return () => { stopHeartbeat(); };
   }, [initSettings, loadTasks]);
 
   return (

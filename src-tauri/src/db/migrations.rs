@@ -87,6 +87,28 @@ pub fn run(conn: &Connection) -> Result<(), rusqlite::Error> {
         ",
     )?;
 
+    // Migration: agent_plan 列
+    let has_agent_plan: bool = conn
+        .prepare("SELECT COUNT(*) FROM pragma_table_info('task') WHERE name='agent_plan'")
+        .and_then(|mut s| s.query_row([], |r| r.get::<_, i64>(0)))
+        .map(|c| c > 0)
+        .unwrap_or(false);
+
+    if !has_agent_plan {
+        conn.execute_batch("ALTER TABLE task ADD COLUMN agent_plan TEXT;")?;
+    }
+
+    // Migration: schedule_log.step_results 列
+    let has_step_results: bool = conn
+        .prepare("SELECT COUNT(*) FROM pragma_table_info('schedule_log') WHERE name='step_results'")
+        .and_then(|mut s| s.query_row([], |r| r.get::<_, i64>(0)))
+        .map(|c| c > 0)
+        .unwrap_or(false);
+
+    if !has_step_results {
+        conn.execute_batch("ALTER TABLE schedule_log ADD COLUMN step_results TEXT;")?;
+    }
+
     conn.execute_batch(
         "CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(title, content, content=knowledge, content_rowid=rowid);"
     ).ok();

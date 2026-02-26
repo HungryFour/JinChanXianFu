@@ -1,11 +1,12 @@
 use crate::db::models::*;
 use crate::db::Database;
+use std::sync::Arc;
 use tauri::State;
 
 // ── Task CRUD ──
 
 #[tauri::command]
-pub fn create_task(db: State<Database>, request: CreateTaskRequest) -> Result<Task, String> {
+pub fn create_task(db: State<Arc<Database>>, request: CreateTaskRequest) -> Result<Task, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -34,6 +35,7 @@ pub fn create_task(db: State<Database>, request: CreateTaskRequest) -> Result<Ta
         tags: tags_json,
         schedule_config: None,
         monitor_config: None,
+        agent_plan: None,
         created_at: now.clone(),
         updated_at: now,
         completed_at: None,
@@ -41,11 +43,11 @@ pub fn create_task(db: State<Database>, request: CreateTaskRequest) -> Result<Ta
 }
 
 #[tauri::command]
-pub fn list_tasks(db: State<Database>) -> Result<Vec<Task>, String> {
+pub fn list_tasks(db: State<Arc<Database>>) -> Result<Vec<Task>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
         .prepare(
-            "SELECT id, title, type, status, stock_symbols, tags, schedule_config, monitor_config, created_at, updated_at, completed_at
+            "SELECT id, title, type, status, stock_symbols, tags, schedule_config, monitor_config, agent_plan, created_at, updated_at, completed_at
              FROM task ORDER BY
                 CASE status WHEN 'active' THEN 0 WHEN 'paused' THEN 1 ELSE 2 END,
                 updated_at DESC",
@@ -63,9 +65,10 @@ pub fn list_tasks(db: State<Database>) -> Result<Vec<Task>, String> {
                 tags: row.get(5)?,
                 schedule_config: row.get(6)?,
                 monitor_config: row.get(7)?,
-                created_at: row.get(8)?,
-                updated_at: row.get(9)?,
-                completed_at: row.get(10)?,
+                agent_plan: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+                completed_at: row.get(11)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -77,7 +80,7 @@ pub fn list_tasks(db: State<Database>) -> Result<Vec<Task>, String> {
 
 #[tauri::command]
 pub fn update_task(
-    db: State<Database>,
+    db: State<Arc<Database>>,
     id: String,
     request: UpdateTaskRequest,
 ) -> Result<(), String> {
@@ -139,11 +142,19 @@ pub fn update_task(
         .map_err(|e| e.to_string())?;
     }
 
+    if let Some(plan) = &request.agent_plan {
+        conn.execute(
+            "UPDATE task SET agent_plan = ?1, updated_at = ?2 WHERE id = ?3",
+            rusqlite::params![plan, now, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
     Ok(())
 }
 
 #[tauri::command]
-pub fn delete_task(db: State<Database>, id: String) -> Result<(), String> {
+pub fn delete_task(db: State<Arc<Database>>, id: String) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM message WHERE task_id = ?1", [&id])
         .map_err(|e| e.to_string())?;
@@ -155,7 +166,7 @@ pub fn delete_task(db: State<Database>, id: String) -> Result<(), String> {
 // ── Message CRUD ──
 
 #[tauri::command]
-pub fn create_message(db: State<Database>, request: CreateMessageRequest) -> Result<Message, String> {
+pub fn create_message(db: State<Arc<Database>>, request: CreateMessageRequest) -> Result<Message, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -198,7 +209,7 @@ pub fn create_message(db: State<Database>, request: CreateMessageRequest) -> Res
 }
 
 #[tauri::command]
-pub fn get_messages(db: State<Database>, task_id: String) -> Result<Vec<Message>, String> {
+pub fn get_messages(db: State<Arc<Database>>, task_id: String) -> Result<Vec<Message>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
         .prepare(
@@ -225,4 +236,43 @@ pub fn get_messages(db: State<Database>, task_id: String) -> Result<Vec<Message>
         .map_err(|e| e.to_string())?;
 
     Ok(messages)
+}
+
+// ── Plan Logs ──
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct PlanLogEntry {
+    pub id: String,
+    pub task_id: String,
+    pub executed_at: String,
+    pub status: String,
+    pub step_results: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_plan_logs(db: State<Arc<Database>>, task_id: String, limit: Option<u32>) -> Result<Vec<PlanLogEntry>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let limit = limit.unwrap_or(20);
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, task_id, executed_at, status, step_results
+             FROM schedule_log WHERE task_id = ?1 ORDER BY executed_at DESC LIMIT ?2",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let logs = stmt
+        .query_map(rusqlite::params![task_id, limit], |row| {
+            Ok(PlanLogEntry {
+                id: row.get(0)?,
+                task_id: row.get(1)?,
+                executed_at: row.get(2)?,
+                status: row.get(3)?,
+                step_results: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(logs)
 }

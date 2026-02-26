@@ -1,5 +1,4 @@
-import type { ModelConfig, ChatRequest, ChatMessage, StreamChunk } from '../../types/ai';
-import { parseSSE } from './streaming';
+import type { ModelConfig, ChatRequest, ChatMessage, StreamChunk, ToolCall } from '../../types/ai';
 
 /**
  * 统一 OpenAI 兼容格式 Provider
@@ -20,10 +19,21 @@ export class OpenAICompatibleProvider {
     }
 
     for (const msg of request.messages) {
-      messages.push({
+      const entry: Record<string, unknown> = {
         role: msg.role,
-        content: this.formatContent(msg),
-      });
+      };
+
+      if (msg.role === 'tool') {
+        entry.content = typeof msg.content === 'string' ? msg.content : '';
+        entry.tool_call_id = msg.tool_call_id;
+      } else if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+        entry.content = msg.content ?? null;
+        entry.tool_calls = msg.tool_calls;
+      } else {
+        entry.content = this.formatContent(msg);
+      }
+
+      messages.push(entry);
     }
 
     const body: Record<string, unknown> = {
@@ -37,6 +47,10 @@ export class OpenAICompatibleProvider {
     }
     if (request.temperature !== undefined) {
       body.temperature = request.temperature;
+    }
+    if (request.tools && request.tools.length > 0) {
+      body.tools = request.tools;
+      body.tool_choice = request.tool_choice ?? 'auto';
     }
 
     const url = `${this.config.baseUrl}/chat/completions`;
@@ -60,23 +74,140 @@ export class OpenAICompatibleProvider {
         return;
       }
 
-      yield* parseSSE(response, (data) => {
-        try {
-          const event = JSON.parse(data);
-          const delta = event.choices?.[0]?.delta?.content;
-          if (delta) return { type: 'text', content: delta };
-          if (event.choices?.[0]?.finish_reason) return { type: 'done', content: '' };
-          return null;
-        } catch {
-          return null;
-        }
-      });
+      // 工具调用累积器 (按 index 累积增量)
+      const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>();
+
+      yield* this.parseSSEWithTools(response, toolCallAccumulator);
     } catch (error) {
       yield { type: 'error', content: `网络错误: ${String(error)}` };
     }
   }
 
-  private formatContent(msg: ChatMessage): string | Array<Record<string, unknown>> {
+  private async *parseSSEWithTools(
+    response: Response,
+    toolCallAccumulator: Map<number, { id: string; name: string; arguments: string }>,
+  ): AsyncGenerator<StreamChunk> {
+    const reader = response.body?.getReader();
+    if (!reader) {
+      yield { type: 'error', content: 'No response body' };
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (!trimmed.startsWith('data: ')) continue;
+
+          const data = trimmed.slice(6);
+
+          try {
+            const event = JSON.parse(data);
+            const choice = event.choices?.[0];
+            if (!choice) continue;
+
+            const delta = choice.delta;
+            const finishReason = choice.finish_reason;
+
+            // 处理文本内容
+            if (delta?.content) {
+              yield { type: 'text', content: delta.content };
+            }
+
+            // 处理工具调用增量
+            if (delta?.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0;
+
+                if (tc.id && tc.function?.name) {
+                  // 新工具调用开始
+                  toolCallAccumulator.set(idx, {
+                    id: tc.id,
+                    name: tc.function.name,
+                    arguments: tc.function.arguments ?? '',
+                  });
+                } else if (tc.function?.arguments) {
+                  // 追加 arguments 片段
+                  const existing = toolCallAccumulator.get(idx);
+                  if (existing) {
+                    existing.arguments += tc.function.arguments;
+                  }
+                }
+
+                yield { type: 'tool_call_delta', content: '' };
+              }
+            }
+
+            // finish_reason === 'tool_calls' 或 'stop'
+            if (finishReason === 'tool_calls' && toolCallAccumulator.size > 0) {
+              const toolCalls: ToolCall[] = [];
+              for (const [, tc] of toolCallAccumulator) {
+                toolCalls.push({
+                  id: tc.id,
+                  type: 'function',
+                  function: { name: tc.name, arguments: tc.arguments },
+                });
+              }
+              yield { type: 'tool_call_complete', content: '', toolCalls };
+              toolCallAccumulator.clear();
+            } else if (finishReason === 'stop') {
+              // 检查是否有未完成的 tool calls (某些 API 可能用 stop)
+              if (toolCallAccumulator.size > 0) {
+                const toolCalls: ToolCall[] = [];
+                for (const [, tc] of toolCallAccumulator) {
+                  toolCalls.push({
+                    id: tc.id,
+                    type: 'function',
+                    function: { name: tc.name, arguments: tc.arguments },
+                  });
+                }
+                yield { type: 'tool_call_complete', content: '', toolCalls };
+                toolCallAccumulator.clear();
+              }
+              yield { type: 'done', content: '' };
+            }
+          } catch {
+            // 忽略 JSON 解析错误
+          }
+        }
+      }
+
+      // 流结束，如果还有未emit的工具调用
+      if (toolCallAccumulator.size > 0) {
+        const toolCalls: ToolCall[] = [];
+        for (const [, tc] of toolCallAccumulator) {
+          toolCalls.push({
+            id: tc.id,
+            type: 'function',
+            function: { name: tc.name, arguments: tc.arguments },
+          });
+        }
+        yield { type: 'tool_call_complete', content: '', toolCalls };
+        toolCallAccumulator.clear();
+      }
+
+      yield { type: 'done', content: '' };
+    } catch (error) {
+      yield { type: 'error', content: String(error) };
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  private formatContent(msg: ChatMessage): string | Array<Record<string, unknown>> | null {
+    if (msg.content === null) return null;
+
     if (typeof msg.content === 'string') {
       return msg.content;
     }

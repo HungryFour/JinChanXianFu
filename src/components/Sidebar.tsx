@@ -6,13 +6,17 @@ import {
   Trash2,
   Clock,
   Eye,
+  Bot,
 } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { TaskConfigPanel } from './config/TaskConfigPanel';
 import type { TaskType, TaskStatus } from '../types/chat';
 
 const taskTypeIcon = (type: TaskType) => {
   switch (type) {
+    case 'agent':
+      return <Bot size={13} className="shrink-0" style={{ color: 'var(--mystic-400)' }} />;
     case 'scheduled':
       return <Clock size={13} className="shrink-0" style={{ color: 'var(--amber-400)' }} />;
     case 'monitor':
@@ -159,6 +163,9 @@ export function Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Config Panel */}
+      <TaskConfigPanel />
 
       {/* Footer */}
       <div className="px-2 py-2" style={{ borderTop: '1px solid var(--border-dark)' }}>

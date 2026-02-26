@@ -10,6 +10,7 @@ pub struct Task {
     pub tags: Option<String>,
     pub schedule_config: Option<String>,
     pub monitor_config: Option<String>,
+    pub agent_plan: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub completed_at: Option<String>,
@@ -43,6 +44,7 @@ pub struct UpdateTaskRequest {
     pub tags: Option<Vec<String>>,
     pub schedule_config: Option<String>,
     pub monitor_config: Option<String>,
+    pub agent_plan: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -53,4 +55,32 @@ pub struct CreateMessageRequest {
     pub image_paths: Option<Vec<String>>,
     pub model_used: Option<String>,
     pub trigger_source: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AlertRule {
+    pub id: String,
+    pub task_id: Option<String>,
+    pub stock_symbol: String,
+    pub alert_type: String,
+    pub condition_json: String,
+    pub is_active: bool,
+    pub last_triggered: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WatchlistItem {
+    pub symbol: String,
+    pub name: Option<String>,
+    pub exchange: Option<String>,
+    pub added_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CreateAlertRequest {
+    pub task_id: Option<String>,
+    pub stock_symbol: String,
+    pub alert_type: String,
+    pub condition_json: String,
 }
