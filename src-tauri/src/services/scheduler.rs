@@ -1,5 +1,5 @@
 use crate::db::Database;
-use crate::services::market;
+use crate::services::{kline, market, tdx};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -100,6 +100,10 @@ impl Scheduler {
             if market_open {
                 if let Err(e) = self.check_alerts().await {
                     eprintln!("检查提醒失败: {}", e);
+                }
+
+                if let Err(e) = self.check_indicators().await {
+                    eprintln!("检查指标失败: {}", e);
                 }
             }
 
@@ -476,6 +480,154 @@ impl Scheduler {
             .map_err(|e| format!("保存截图失败: {}", e))?;
 
         Ok(file_path.to_string_lossy().to_string())
+    }
+
+    // ── TDX 指标检查 ──
+
+    async fn check_indicators(&self) -> Result<(), String> {
+        let indicators = {
+            let conn = self.db.conn.lock().map_err(|e| e.to_string())?;
+            let mut stmt = conn
+                .prepare(
+                    "SELECT id, name, formula_source, stock_symbols, task_id, check_interval_secs, last_checked, last_signal
+                     FROM indicator WHERE is_active = 1 AND market_hours_only = 1",
+                )
+                .map_err(|e| e.to_string())?;
+
+            let results = stmt
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,   // id
+                        row.get::<_, String>(1)?,   // name
+                        row.get::<_, String>(2)?,   // formula_source
+                        row.get::<_, String>(3)?,   // stock_symbols JSON
+                        row.get::<_, Option<String>>(4)?, // task_id
+                        row.get::<_, i64>(5)?,      // check_interval_secs
+                        row.get::<_, Option<String>>(6)?, // last_checked
+                        row.get::<_, Option<String>>(7)?, // last_signal
+                    ))
+                })
+                .map_err(|e| e.to_string())?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?;
+
+            results
+        };
+
+        // 同时查非交易时段限制的指标
+        let indicators_no_mho = {
+            let conn = self.db.conn.lock().map_err(|e| e.to_string())?;
+            let mut stmt = conn
+                .prepare(
+                    "SELECT id, name, formula_source, stock_symbols, task_id, check_interval_secs, last_checked, last_signal
+                     FROM indicator WHERE is_active = 1 AND market_hours_only = 0",
+                )
+                .map_err(|e| e.to_string())?;
+
+            let results = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, i64>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
+                ))
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+
+            results
+        };
+
+        let all_indicators: Vec<_> = indicators.into_iter().chain(indicators_no_mho).collect();
+
+        let now = chrono::Utc::now();
+
+        for (id, name, formula_source, symbols_json, task_id, interval_secs, last_checked, last_signal) in &all_indicators {
+            // 检查间隔
+            if let Some(last) = last_checked {
+                if let Ok(last_time) = chrono::DateTime::parse_from_rfc3339(last) {
+                    if now.signed_duration_since(last_time).num_seconds() < *interval_secs {
+                        continue;
+                    }
+                }
+            }
+
+            let symbols: Vec<String> = serde_json::from_str(symbols_json).unwrap_or_default();
+
+            for symbol in &symbols {
+                let bars = match kline::fetch_daily_klines(symbol, 300).await {
+                    Ok(b) => b,
+                    Err(e) => {
+                        eprintln!("获取 {} K线失败: {}", symbol, e);
+                        continue;
+                    }
+                };
+
+                let eval_result = match tdx::evaluate_formula(&formula_source, &bars) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("计算指标 {} 公式失败: {}", name, e);
+                        continue;
+                    }
+                };
+
+                // 检查信号
+                for signal in &eval_result.signals {
+                    if !signal.triggered {
+                        continue;
+                    }
+
+                    // 去重: 与 last_signal 比较
+                    let today = (now + chrono::Duration::hours(8))
+                        .format("%Y-%m-%d")
+                        .to_string();
+                    let signal_key = format!("{}:{}:{}", symbol, signal.text, today);
+
+                    if let Some(ls) = last_signal {
+                        if ls == &signal_key {
+                            continue; // 同日同信号不重复
+                        }
+                    }
+
+                    // 触发信号
+                    let _ = self.app_handle.emit(
+                        "indicator-signal-triggered",
+                        serde_json::json!({
+                            "indicator_id": id,
+                            "indicator_name": name,
+                            "symbol": symbol,
+                            "signal_text": signal.text,
+                            "signal_value": signal.value,
+                            "task_id": task_id,
+                            "date": today,
+                        }),
+                    );
+
+                    // 更新 last_signal
+                    if let Ok(conn) = self.db.conn.lock() {
+                        let _ = conn.execute(
+                            "UPDATE indicator SET last_signal = ?1, last_checked = ?2, updated_at = ?2 WHERE id = ?3",
+                            rusqlite::params![signal_key, now.to_rfc3339(), id],
+                        );
+                    }
+                }
+            }
+
+            // 更新 last_checked（即使无信号）
+            if let Ok(conn) = self.db.conn.lock() {
+                let _ = conn.execute(
+                    "UPDATE indicator SET last_checked = ?1, updated_at = ?1 WHERE id = ?2",
+                    rusqlite::params![now.to_rfc3339(), id],
+                );
+            }
+        }
+
+        Ok(())
     }
 
     // ── 原有 Alert 检查 ──

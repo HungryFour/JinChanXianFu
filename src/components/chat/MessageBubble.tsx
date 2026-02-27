@@ -23,8 +23,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <div
           className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, var(--bg-card), var(--bg-hover))',
-            border: '1px solid var(--border-mid)',
+            background: 'rgba(201, 166, 85, 0.08)',
+            border: '1px solid var(--border-dark)',
           }}
         >
           <span
@@ -41,16 +41,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <div
           className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, #8a6b20, #c9a34f)',
-            boxShadow: '0 0 10px var(--gold-glow)',
+            background: 'linear-gradient(135deg, #6b5420, #9a7d38, #c9a655)',
+            boxShadow: '0 0 14px var(--toad-gold-glow)',
           }}
         >
           <span
             className="text-sm leading-none"
             style={{
               fontFamily: 'var(--font-display)',
-              color: 'var(--bg-abyss)',
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              color: 'var(--gold-50)',
+              textShadow: '0 1px 2px rgba(0,0,0,0.4)',
             }}
           >
             蟾
@@ -60,17 +60,17 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
       {/* Message content */}
       <div
-        className={`max-w-[80%] rounded-xl px-4 py-3 ${isUser ? '' : ''}`}
+        className={`max-w-[80%] rounded-xl px-4 py-3`}
         style={
           isUser
             ? {
-                background: 'linear-gradient(135deg, var(--bg-card), var(--bg-active))',
-                border: '1px solid var(--border-mid)',
+                background: 'rgba(201, 166, 85, 0.06)',
+                border: '1px solid var(--border-dark)',
               }
             : {
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border-dark)',
-                borderLeftColor: 'var(--border-gold-dim)',
+                borderLeftColor: 'var(--border-mid)',
                 borderLeftWidth: '2px',
               }
         }
@@ -79,7 +79,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <div
           className="text-[10px] mb-1.5 tracking-wider"
           style={{
-            color: isUser ? 'var(--text-dim)' : 'var(--text-gold)',
+            color: isUser ? 'var(--text-dim)' : 'var(--text-accent)',
             fontFamily: 'var(--font-display)',
           }}
         >

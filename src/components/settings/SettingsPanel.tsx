@@ -10,8 +10,8 @@ export function SettingsPanel() {
     <div
       className="fixed inset-0 flex items-center justify-center"
       style={{
-        background: 'rgba(8, 6, 16, 0.75)',
-        backdropFilter: 'blur(4px)',
+        background: 'rgba(8, 11, 16, 0.7)',
+        backdropFilter: 'blur(8px)',
         zIndex: 50,
         animation: 'backdrop-in 0.2s ease',
       }}
@@ -24,7 +24,7 @@ export function SettingsPanel() {
         style={{
           background: 'var(--bg-panel)',
           border: '1px solid var(--border-dark)',
-          boxShadow: '0 0 40px rgba(0,0,0,0.5), 0 0 80px var(--gold-glow)',
+          boxShadow: '0 8px 40px rgba(0, 0, 0, 0.4), 0 0 80px var(--gold-glow)',
           animation: 'modal-in 0.3s ease',
         }}
       >
@@ -98,7 +98,7 @@ export function SettingsPanel() {
                   {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
                 </button>
                 {modelConfig.apiKey && (
-                  <span className="p-1" style={{ color: 'var(--jade-400)' }}>
+                  <span className="p-1" style={{ color: 'var(--gold-400)' }}>
                     <Check size={13} />
                   </span>
                 )}
@@ -167,7 +167,7 @@ export function SettingsPanel() {
         <div className="px-6 py-4" style={{ borderTop: '1px solid var(--border-dark)' }}>
           <button
             onClick={() => setSettingsOpen(false)}
-            className="btn-gold w-full py-2.5 rounded-lg text-sm"
+            className="btn-jade w-full py-2.5 rounded-lg text-sm"
           >
             封印设置
           </button>

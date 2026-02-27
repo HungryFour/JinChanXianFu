@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import {
-  Plus,
   Scroll,
   Settings,
   Trash2,
@@ -10,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import { TaskConfigPanel } from './config/TaskConfigPanel';
 import type { TaskType, TaskStatus } from '../types/chat';
 
 const taskTypeIcon = (type: TaskType) => {
@@ -22,7 +20,7 @@ const taskTypeIcon = (type: TaskType) => {
     case 'monitor':
       return <Eye size={13} className="shrink-0" style={{ color: 'var(--mystic-400)' }} />;
     default:
-      return <Scroll size={13} className="shrink-0" style={{ color: 'var(--text-secondary)' }} />;
+      return <Scroll size={13} className="shrink-0" style={{ color: 'var(--text-dim)' }} />;
   }
 };
 
@@ -52,9 +50,7 @@ export function Sidebar() {
     loadTasks();
   }, [loadTasks]);
 
-  const handleNewTask = async () => {
-    setActiveTask(null);
-  };
+  const isLobby = !activeTaskId;
 
   return (
     <div
@@ -67,54 +63,63 @@ export function Sidebar() {
       {/* macOS traffic light spacing + drag region */}
       <div data-tauri-drag-region style={{ height: '38px', minHeight: '38px' }} className="shrink-0" />
 
-      {/* Header */}
-      <div className="px-4 pb-4" style={{ borderBottom: '1px solid var(--border-dark)' }}>
-        <div className="flex items-center gap-3 mb-5">
-          {/* Toad Emblem */}
+      {/* 仙府入口 */}
+      <div
+        className="py-4 cursor-pointer transition-all"
+        style={{
+          borderBottom: '1px solid var(--border-dark)',
+          background: isLobby ? 'var(--bg-active)' : 'transparent',
+        }}
+        onClick={() => setActiveTask(null)}
+        onMouseEnter={(e) => {
+          if (!isLobby) e.currentTarget.style.background = 'var(--bg-hover)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isLobby) e.currentTarget.style.background = 'transparent';
+        }}
+      >
+        <div className="flex flex-col items-center gap-2">
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            className="w-12 h-12 rounded-xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, #8a6b20, #c9a34f)',
-              boxShadow: '0 0 14px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.15)',
+              background: 'linear-gradient(135deg, #6b5420, #9a7d38, #c9a655)',
+              boxShadow: isLobby
+                ? '0 0 28px var(--toad-gold-glow-strong), 0 0 56px rgba(212,168,48,0.10), inset 0 1px 0 rgba(255,255,255,0.08)'
+                : '0 0 18px var(--toad-gold-glow), inset 0 1px 0 rgba(255,255,255,0.08)',
+              animation: isLobby ? 'toad-breathe 3s ease infinite' : undefined,
             }}
           >
             <span
-              className="text-base leading-none"
+              className="text-xl leading-none"
               style={{
                 fontFamily: 'var(--font-display)',
-                color: 'var(--bg-abyss)',
-                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                color: 'var(--gold-50)',
+                textShadow: '0 1px 3px rgba(0,0,0,0.5)',
               }}
             >
               蟾
             </span>
           </div>
-          <div>
+          <div className="text-center">
             <span
-              className="gold-shimmer text-lg leading-none block"
+              className="gold-shimmer text-base leading-none block"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              金蟾
+              金蟾仙府
             </span>
-            <span className="text-[10px] mt-0.5 block" style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-display)' }}>
-              仙侠交易殿
+            <span className="text-[10px] mt-1 block" style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-display)' }}>
+              聚财纳福 · 洞察先机
             </span>
           </div>
         </div>
-
-        <button
-          onClick={handleNewTask}
-          className="btn-outline-gold w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm"
-        >
-          <Plus size={14} />
-          新建任务
-        </button>
       </div>
 
-      {/* Task list */}
-      <div className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+      {/* Task list (卷轴) */}
+      <div className="sidebar-scroll flex-1 flex flex-col min-h-0">
+      <div className="scroll-rod shrink-0" />
+      <div className="scroll-body flex-1 overflow-y-auto space-y-0.5" style={{ padding: '8px 20px' }}>
         {tasks.length > 0 && (
-          <div className="separator-ornate mb-3 px-2">
+          <div className="separator-ornate mb-3">
             <span className="text-[10px] tracking-[0.2em]" style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-display)' }}>
               任务卷轴
             </span>
@@ -124,7 +129,7 @@ export function Sidebar() {
         {tasks.map((task) => (
           <div
             key={task.id}
-            className={`task-item ${activeTaskId === task.id ? 'active' : ''} group flex items-center gap-2.5 px-3 py-2.5 rounded-r-lg cursor-pointer`}
+            className={`task-item ${activeTaskId === task.id ? 'active' : ''} group flex items-center gap-2.5 py-2.5 rounded-r-lg cursor-pointer`}
             onClick={() => setActiveTask(task.id)}
           >
             {taskTypeIcon(task.task_type)}
@@ -155,7 +160,7 @@ export function Sidebar() {
 
         {tasks.length === 0 && (
           <div
-            className="text-center text-xs py-10 px-4"
+            className="text-center text-xs py-10"
             style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-display)' }}
           >
             <div className="mb-2" style={{ fontSize: '24px', opacity: 0.3 }}>卷</div>
@@ -163,9 +168,8 @@ export function Sidebar() {
           </div>
         )}
       </div>
-
-      {/* Config Panel */}
-      <TaskConfigPanel />
+      <div className="scroll-rod shrink-0" />
+      </div>
 
       {/* Footer */}
       <div className="px-2 py-2" style={{ borderTop: '1px solid var(--border-dark)' }}>
@@ -174,7 +178,7 @@ export function Sidebar() {
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
           style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-display)' }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--text-gold)';
+            e.currentTarget.style.color = 'var(--text-accent)';
             e.currentTarget.style.background = 'var(--bg-hover)';
           }}
           onMouseLeave={(e) => {

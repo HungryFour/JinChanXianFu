@@ -113,5 +113,23 @@ pub fn run(conn: &Connection) -> Result<(), rusqlite::Error> {
         "CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(title, content, content=knowledge, content_rowid=rowid);"
     ).ok();
 
+    // Migration: indicator 表
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS indicator (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            formula_source TEXT NOT NULL,
+            stock_symbols TEXT NOT NULL,
+            task_id TEXT REFERENCES task(id) ON DELETE SET NULL,
+            is_active INTEGER DEFAULT 1,
+            check_interval_secs INTEGER DEFAULT 60,
+            market_hours_only INTEGER DEFAULT 1,
+            last_checked TEXT,
+            last_signal TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );"
+    )?;
+
     Ok(())
 }

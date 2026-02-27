@@ -20,6 +20,16 @@ interface AlertTriggeredPayload {
   message: string;
 }
 
+interface IndicatorSignalPayload {
+  indicator_id: string;
+  indicator_name: string;
+  symbol: string;
+  signal_text: string;
+  signal_value: number;
+  task_id: string | null;
+  date: string;
+}
+
 interface AgentPlanTriggerPayload {
   task_id: string;
   plan_description: string;
@@ -260,6 +270,45 @@ async function handleAgentPlanVision(payload: AgentPlanVisionPayload) {
   }
 }
 
+async function handleIndicatorSignal(payload: IndicatorSignalPayload) {
+  const chatStore = useChatStore.getState();
+  const { indicator_name, symbol, signal_text, signal_value, task_id, date } = payload;
+
+  const content = `📊 **指标信号触发**\n\n指标: ${indicator_name}\n股票: ${symbol}\n信号: ${signal_text}\n价位: ${signal_value.toFixed(2)}\n日期: ${date}`;
+
+  if (task_id) {
+    await chatStore.addMessage(task_id, 'assistant', content, undefined, 'indicator-signal');
+  } else {
+    // 无绑定 task，创建新 task
+    const task = await chatStore.createTask(`指标信号: ${indicator_name} - ${symbol}`, 'monitor');
+    await chatStore.addMessage(task.id, 'assistant', content, undefined, 'indicator-signal');
+  }
+
+  // 如有 API Key，调用 AI 分析
+  const { modelConfig } = useSettingsStore.getState();
+  if (!modelConfig.apiKey) return;
+
+  const targetTaskId = task_id || chatStore.tasks[chatStore.tasks.length - 1]?.id;
+  if (!targetTaskId) return;
+
+  const userContent = `[指标信号自动触发] 指标 "${indicator_name}" 在股票 ${symbol} 上触发了 "${signal_text}" 信号（价位 ${signal_value.toFixed(2)}）。请获取该股票最新行情并给出分析建议。`;
+  await chatStore.addMessage(targetTaskId, 'user', userContent, undefined, 'indicator-signal');
+
+  const messages: ChatMessage[] = [{ role: 'user', content: userContent }];
+
+  try {
+    const systemPrompt = await buildContext(userContent);
+    const tools = toolRegistry.getAllDefinitions();
+    const result = await runAgentLoop({ messages, systemPrompt, tools });
+
+    if (result.content) {
+      await chatStore.addMessage(targetTaskId, 'assistant', result.content, modelConfig.model, 'indicator-signal');
+    }
+  } catch (error) {
+    console.error('指标信号 AI 分析失败:', error);
+  }
+}
+
 function formatStepResultsSummary(stepResults: Record<string, unknown>): string {
   const lines: string[] = [];
 
@@ -298,7 +347,11 @@ export async function startHeartbeat() {
     handleAgentPlanVision(event.payload);
   });
 
-  unlisteners = [unsub1, unsub2, unsub3, unsub4];
+  const unsub5 = await listen<IndicatorSignalPayload>('indicator-signal-triggered', (event) => {
+    handleIndicatorSignal(event.payload);
+  });
+
+  unlisteners = [unsub1, unsub2, unsub3, unsub4, unsub5];
 }
 
 export function stopHeartbeat() {

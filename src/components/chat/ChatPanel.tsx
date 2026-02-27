@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Square } from 'lucide-react';
+import { Send, Square, Trash2 } from 'lucide-react';
 import { useChatStore } from '../../stores/chatStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAgent } from '../../hooks/useAgent';
@@ -30,11 +30,29 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   get_agent_plan: '查询执行计划',
   stop_agent_plan: '停止执行计划',
   list_available_windows: '列出可用窗口',
+  manage_api_secret: '管理密钥',
+  create_api_adapter: '创建适配器',
+  delete_api_adapter: '删除适配器',
+  list_api_adapters: '查看适配器',
+  test_api_adapter: '测试适配器',
+  browser_open: '打开浏览器',
+  browser_navigate: '导航网页',
+  browser_screenshot: '截取页面',
+  browser_click: '点击元素',
+  browser_type: '输入文本',
+  browser_scroll: '滚动页面',
+  browser_get_info: '获取页面信息',
+  browser_close: '关闭浏览器',
+  lobby_create_task: '创建任务',
+  lobby_list_tasks: '查看任务',
+  lobby_switch_task: '切换任务',
+  lobby_update_task: '更新任务',
+  lobby_delete_task: '删除任务',
+  lobby_back_to_lobby: '返回仙府',
 };
 
 function getToolLabel(execution: ToolExecution): string {
   const baseName = TOOL_DISPLAY_NAMES[execution.name] || execution.name;
-  // 为特定工具添加参数上下文
   if (execution.args) {
     if (execution.name === 'fetch_stock_quote' && execution.args.symbol) {
       return `${baseName} ${execution.args.symbol}`;
@@ -47,6 +65,20 @@ function getToolLabel(execution: ToolExecution): string {
     }
     if (execution.name === 'create_alert' && execution.args.stock_symbol) {
       return `${baseName} ${execution.args.stock_symbol}`;
+    }
+    if ((execution.name === 'browser_open' || execution.name === 'browser_navigate') && execution.args.url) {
+      const url = String(execution.args.url);
+      try {
+        return `${baseName} ${new URL(url.startsWith('http') ? url : 'https://' + url).hostname}`;
+      } catch {
+        return `${baseName} ${url.slice(0, 30)}`;
+      }
+    }
+    if (execution.name === 'browser_click' && execution.args.x !== undefined) {
+      return `${baseName} (${execution.args.x}, ${execution.args.y})`;
+    }
+    if (execution.name === 'lobby_create_task' && execution.args.title) {
+      return `${baseName}「${execution.args.title}」`;
     }
   }
   return baseName;
@@ -65,12 +97,12 @@ function ToolExecutionIndicator({ executions }: { executions: ToolExecution[] })
           key={exec.id}
           className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg"
           style={{
-            background: 'rgba(201, 163, 79, 0.06)',
-            border: '1px solid rgba(201, 163, 79, 0.15)',
+            background: 'rgba(201, 166, 85, 0.04)',
+            border: '1px solid rgba(201, 166, 85, 0.08)',
           }}
         >
-          <span style={{ fontSize: '12px' }}>
-            {exec.status === 'running' ? '⚙' : exec.status === 'completed' ? '✓' : '✗'}
+          <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+            {exec.status === 'running' ? '>' : exec.status === 'completed' ? '+' : '!'}
           </span>
           <span
             style={{
@@ -84,8 +116,9 @@ function ToolExecutionIndicator({ executions }: { executions: ToolExecution[] })
             <span
               className="w-1 h-1 rounded-full"
               style={{
-                background: 'var(--gold-400)',
-                animation: 'pulse-gold 1s ease infinite',
+                background: 'var(--gold-particle)',
+                boxShadow: '0 0 4px var(--gold-particle-glow)',
+                animation: 'pulse-gold-dot 1s ease infinite',
               }}
             />
           )}
@@ -100,19 +133,20 @@ function ToadAvatar({ glowing }: { glowing?: boolean }) {
     <div
       className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
       style={{
-        background: 'linear-gradient(135deg, #8a6b20, #c9a34f)',
+        background: 'linear-gradient(135deg, #6b5420, #9a7d38, #c9a655)',
         boxShadow: glowing
-          ? '0 0 20px var(--gold-glow-strong), 0 0 40px rgba(201, 163, 79, 0.08)'
-          : '0 0 10px var(--gold-glow)',
+          ? '0 0 28px var(--toad-gold-glow-strong), 0 0 56px rgba(212, 168, 48, 0.10)'
+          : '0 0 14px var(--toad-gold-glow)',
         animation: glowing ? 'toad-breathe 2s ease infinite' : undefined,
       }}
     >
       <span
-        className="text-sm leading-none"
+        className="leading-none"
         style={{
           fontFamily: 'var(--font-display)',
-          color: 'var(--bg-abyss)',
-          textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          fontSize: '14px',
+          color: 'var(--gold-50)',
+          textShadow: '0 1px 3px rgba(0,0,0,0.5)',
         }}
       >
         蟾
@@ -127,10 +161,12 @@ export function ChatPanel() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { messages, isStreaming, streamingContent, activeTaskId, toolExecutions } =
+  const { messages, isStreaming, streamingContent, activeTaskId, toolExecutions, clearLobbyMessages } =
     useChatStore();
   const { modelConfig } = useSettingsStore();
   const { sendMessage, stopStreaming } = useAgent();
+
+  const isLobby = !activeTaskId;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -138,20 +174,20 @@ export function ChatPanel() {
 
   useEffect(scrollToBottom, [messages, streamingContent, toolExecutions]);
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || isStreaming) return;
+  const handleSend = async (text?: string) => {
+    const msg = (text || input).trim();
+    if (!msg || isStreaming) return;
 
     if (!modelConfig.apiKey) {
       setError('请先在仙府设置中配置秘钥');
       return;
     }
 
-    setInput('');
+    if (!text) setInput('');
     setError(null);
 
     try {
-      await sendMessage(text);
+      await sendMessage(msg);
     } catch (err) {
       setError(String(err));
     }
@@ -164,115 +200,41 @@ export function ChatPanel() {
     }
   };
 
-  /* ── Welcome Screen ── */
-  if (!activeTaskId && messages.length === 0) {
-    return (
-      <div
-        className="flex-1 flex flex-col items-center justify-center gap-2 px-4"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        {/* Toad Emblem */}
+  return (
+    <div className="cloud-border flex-1 flex flex-col min-h-0">
+      {/* 仙府标识 */}
+      {isLobby && (
         <div
-          className="relative mb-2"
-          style={{ animation: 'welcome-emblem 0.8s ease-out both' }}
+          className="flex items-center gap-2.5 px-5 py-2"
+          style={{ borderBottom: '1px solid var(--border-dark)' }}
         >
-          <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center relative"
-            style={{
-              background: 'linear-gradient(145deg, #6b5520, #c9a34f, #8a7028)',
-              boxShadow:
-                '0 0 30px var(--gold-glow-strong), 0 0 60px rgba(201, 163, 79, 0.08), inset 0 2px 0 rgba(255,255,255,0.15)',
-              animation: 'toad-float 4s ease-in-out infinite, toad-breathe 3s ease infinite',
-            }}
-          >
+          <ToadAvatar />
+          <div className="flex-1">
             <span
-              style={{
-                fontFamily: 'var(--font-calligraphy)',
-                fontSize: '36px',
-                color: 'var(--bg-abyss)',
-                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                lineHeight: 1,
-              }}
+              className="gold-shimmer text-base leading-none block"
+              style={{ fontFamily: 'var(--font-display)' }}
             >
-              蟾
+              金蟾仙府
+            </span>
+            <span
+              className="text-[10px] mt-0.5 block"
+              style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-display)' }}
+            >
+              聚财纳福 · 洞察先机
             </span>
           </div>
-          {/* Glow halo */}
-          <div
-            className="absolute -inset-6 rounded-3xl pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, rgba(201,163,79,0.08) 0%, transparent 70%)',
-            }}
-          />
-        </div>
-
-        {/* Title */}
-        <h1
-          className="gold-shimmer text-3xl mt-2"
-          style={{
-            fontFamily: 'var(--font-calligraphy)',
-            animation: 'welcome-title 0.6s ease-out 0.3s both',
-          }}
-        >
-          金蟾
-        </h1>
-
-        {/* Subtitle */}
-        <p
-          className="text-sm mt-1 tracking-widest"
-          style={{
-            color: 'var(--text-dim)',
-            fontFamily: 'var(--font-display)',
-            animation: 'welcome-subtitle 0.6s ease-out 0.6s both',
-          }}
-        >
-          聚财纳福 · 洞察先机
-        </p>
-
-        {/* Ornate separator */}
-        <div
-          className="separator-ornate w-48 my-4"
-          style={{ animation: 'welcome-subtitle 0.6s ease-out 0.8s both' }}
-        >
-          <span style={{ color: 'var(--border-gold-dim)', fontSize: '8px' }}>◆</span>
-        </div>
-
-        {/* Input */}
-        <div
-          className="w-full max-w-lg"
-          style={{ animation: 'welcome-input 0.6s ease-out 1s both' }}
-        >
-          <div className="relative">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="向金蟾问道，开启新的修行..."
-              className="input-realm w-full rounded-xl px-4 py-3 pr-12 text-sm resize-none"
-              rows={2}
-            />
+          {messages.length > 0 && (
             <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="btn-gold absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg disabled:opacity-20"
+              onClick={() => clearLobbyMessages()}
+              className="p-1.5 rounded-lg hover:bg-[rgba(201,166,85,0.08)] transition-colors"
+              title="清空对话"
             >
-              <Send size={15} />
+              <Trash2 size={14} style={{ color: 'var(--text-dim)' }} />
             </button>
-          </div>
-          {error && (
-            <p className="mt-2 text-xs" style={{ color: 'var(--cinnabar-400)' }}>
-              {error}
-            </p>
           )}
         </div>
-      </div>
-    );
-  }
+      )}
 
-  /* ── Chat View ── */
-  return (
-    <div className="flex-1 flex flex-col min-h-0">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
         {messages.map((msg) => (
@@ -287,24 +249,21 @@ export function ChatPanel() {
           >
             <ToadAvatar glowing />
             <div className="flex-1 max-w-[80%]">
-              {/* 工具执行指示器 */}
               <ToolExecutionIndicator executions={toolExecutions} />
 
-              {/* 流式文本输出 */}
               {streamingContent ? (
                 <div
                   className="rounded-xl px-4 py-3"
                   style={{
                     background: 'var(--bg-card)',
                     border: '1px solid var(--border-dark)',
-                    borderLeftColor: 'var(--border-gold-dim)',
+                    borderLeftColor: 'var(--border-mid)',
                     borderLeftWidth: '2px',
                   }}
                 >
                   <StreamingText content={streamingContent} />
                 </div>
               ) : toolExecutions.length === 0 ? (
-                /* 思考指示器（无工具调用时） */
                 <div
                   className="rounded-xl px-4 py-3"
                   style={{
@@ -317,22 +276,25 @@ export function ChatPanel() {
                       <span
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          background: 'var(--gold-400)',
-                          animation: 'pulse-gold 1.5s ease infinite',
+                          background: 'var(--gold-particle)',
+                          animation: 'pulse-gold-dot 1.5s ease infinite',
+                          boxShadow: '0 0 4px var(--gold-particle-glow)',
                         }}
                       />
                       <span
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          background: 'var(--gold-400)',
-                          animation: 'pulse-gold 1.5s ease 0.3s infinite',
+                          background: 'var(--gold-particle)',
+                          animation: 'pulse-gold-dot 1.5s ease 0.3s infinite',
+                          boxShadow: '0 0 4px var(--gold-particle-glow)',
                         }}
                       />
                       <span
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          background: 'var(--gold-400)',
-                          animation: 'pulse-gold 1.5s ease 0.6s infinite',
+                          background: 'var(--gold-particle)',
+                          animation: 'pulse-gold-dot 1.5s ease 0.6s infinite',
+                          boxShadow: '0 0 4px var(--gold-particle-glow)',
                         }}
                       />
                     </div>
@@ -368,15 +330,15 @@ export function ChatPanel() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="与金蟾论道..."
+            placeholder={isLobby ? '向金蟾问道...' : '与金蟾论道...'}
             disabled={isStreaming}
             className="input-realm w-full rounded-xl px-4 py-3 pr-12 text-sm resize-none disabled:opacity-40"
             rows={2}
           />
           <button
-            onClick={isStreaming ? stopStreaming : handleSend}
+            onClick={() => (isStreaming ? stopStreaming() : handleSend())}
             disabled={!isStreaming && !input.trim()}
-            className="btn-gold absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg disabled:opacity-20"
+            className="btn-jade absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg disabled:opacity-20"
           >
             {isStreaming ? <Square size={15} /> : <Send size={15} />}
           </button>

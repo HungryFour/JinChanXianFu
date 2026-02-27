@@ -7,12 +7,14 @@ interface ChatState {
   tasks: Task[];
   activeTaskId: string | null;
   activeTaskPlan: AgentPlan | null;
+  lobbyTaskId: string | null;
   messages: Message[];
   isStreaming: boolean;
   streamingContent: string;
   toolExecutions: ToolExecution[];
 
   loadTasks: () => Promise<void>;
+  initLobby: () => Promise<void>;
   createTask: (title: string, taskType?: string) => Promise<Task>;
   deleteTask: (id: string) => Promise<void>;
   setActiveTask: (id: string | null) => Promise<void>;
@@ -31,12 +33,14 @@ interface ChatState {
   addToolExecution: (execution: ToolExecution) => void;
   updateToolExecution: (id: string, updates: Partial<ToolExecution>) => void;
   clearToolExecutions: () => void;
+  clearLobbyMessages: () => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   tasks: [],
   activeTaskId: null,
   activeTaskPlan: null,
+  lobbyTaskId: null,
   messages: [],
   isStreaming: false,
   streamingContent: '',
@@ -44,10 +48,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   loadTasks: async () => {
     try {
-      const tasks = await invoke<Task[]>('list_tasks');
+      const allTasks = await invoke<Task[]>('list_tasks');
+      // 过滤掉 lobby 类型的 task，不在侧边栏显示
+      const tasks = allTasks.filter((t) => t.task_type !== 'lobby');
       set({ tasks });
     } catch (error) {
       console.error('Failed to load tasks:', error);
+    }
+  },
+
+  initLobby: async () => {
+    try {
+      const allTasks = await invoke<Task[]>('list_tasks');
+      const lobbyTask = allTasks.find((t) => t.task_type === 'lobby');
+
+      if (lobbyTask) {
+        set({ lobbyTaskId: lobbyTask.id });
+      } else {
+        // 创建大厅 task
+        const task = await invoke<Task>('create_task', {
+          request: { title: '大厅', task_type: 'lobby' },
+        });
+        set({ lobbyTaskId: task.id });
+      }
+
+      // 如果当前没有 activeTask，加载大厅消息
+      const { activeTaskId, lobbyTaskId } = get();
+      const lid = lobbyTaskId || get().lobbyTaskId;
+      if (!activeTaskId && lid) {
+        await get().loadMessages(lid);
+      }
+    } catch (error) {
+      console.error('Failed to init lobby:', error);
     }
   },
 
@@ -57,8 +89,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
     set((state) => ({
       tasks: [task, ...state.tasks],
-      activeTaskId: task.id,
-      messages: [],
     }));
     return task;
   },
@@ -71,10 +101,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
       tasks,
       activeTaskId:
         state.activeTaskId === id
-          ? tasks[0]?.id || null
+          ? null
           : state.activeTaskId,
       messages: state.activeTaskId === id ? [] : state.messages,
     });
+    // 如果删了当前 task，回到大厅
+    if (state.activeTaskId === id) {
+      const lobbyId = get().lobbyTaskId;
+      if (lobbyId) {
+        await get().loadMessages(lobbyId);
+      }
+    }
   },
 
   setActiveTask: async (id: string | null) => {
@@ -88,6 +125,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ activeTaskId: id, activeTaskPlan: plan, messages: [] });
     if (id) {
       await get().loadMessages(id);
+    } else {
+      // 回到大厅：加载 lobby 消息
+      const lobbyId = get().lobbyTaskId;
+      if (lobbyId) {
+        await get().loadMessages(lobbyId);
+      }
     }
   },
 
@@ -139,4 +182,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })),
 
   clearToolExecutions: () => set({ toolExecutions: [] }),
+
+  clearLobbyMessages: async () => {
+    const lobbyId = get().lobbyTaskId;
+    if (!lobbyId) return;
+    try {
+      await invoke('clear_messages', { taskId: lobbyId });
+      // 只在当前是 lobby 模式时清空前端消息
+      if (!get().activeTaskId) {
+        set({ messages: [] });
+      }
+    } catch (error) {
+      console.error('Failed to clear lobby messages:', error);
+    }
+  },
 }));

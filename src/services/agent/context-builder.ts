@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { loadSkills, matchSkills } from './skills-loader';
 import type { Skill } from '../../types/agent';
 import { useChatStore } from '../../stores/chatStore';
+import { useBrowserStore } from '../../stores/browserStore';
 
 const FALLBACK_SOUL = `你是 金蟾，一个专业的 AI 炒股助手和智能代理。你不仅能回答问题，还能主动调用工具获取实时数据、执行操作。
 
@@ -71,11 +72,24 @@ export async function buildContext(userInput: string): Promise<string> {
     }
   } catch { /* skip */ }
 
-  // 4. 注入当前 task 的 Agent Plan（如果有）
+  // 4. 注入大厅/任务内场景提示 + Agent Plan
   try {
     const { activeTaskId, tasks } = useChatStore.getState();
-    if (activeTaskId) {
+    if (!activeTaskId) {
+      // 大厅模式
+      parts.push(`\n## 当前场景：金蟾仙府
+你现在在仙府中与用户对话。用户可能会：
+- 闲聊、问行情
+- 要求创建新任务（使用 lobby_create_task）
+- 查看/管理任务（使用 lobby_list_tasks / lobby_update_task / lobby_delete_task）
+- 切换到某个任务（使用 lobby_switch_task）
+
+创建任务后自动切换到该任务。不要主动建议创建任务，等用户明确表达需求。`);
+    } else {
       const task = tasks.find((t) => t.id === activeTaskId);
+      parts.push(`\n## 当前场景：任务内
+用户在任务「${task?.title || '未知'}」中。用户可能要求回到仙府（使用 lobby_back_to_lobby）。`);
+
       if (task?.agent_plan) {
         const plan = JSON.parse(task.agent_plan);
         parts.push(`\n## 当前任务的执行计划 (Agent Plan)\n\`\`\`json\n${JSON.stringify(plan, null, 2)}\n\`\`\`\n\n用户可能会要求修改此计划的参数，请使用 update_agent_plan 工具。要停止计划请使用 stop_agent_plan。`);
@@ -83,7 +97,15 @@ export async function buildContext(userInput: string): Promise<string> {
     }
   } catch { /* skip */ }
 
-  // 5. 加载并匹配技能
+  // 5. 注入浏览器状态
+  try {
+    const { isOpen, currentUrl } = useBrowserStore.getState();
+    if (isOpen && currentUrl) {
+      parts.push(`\n## 内嵌浏览器状态\n当前已打开浏览器，正在访问: ${currentUrl}\n可以使用 browser_* 工具继续操作此页面。`);
+    }
+  } catch { /* skip */ }
+
+  // 6. 加载并匹配技能
   try {
     if (!cachedSkills) {
       cachedSkills = await loadSkills();

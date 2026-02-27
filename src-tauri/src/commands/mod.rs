@@ -1,6 +1,9 @@
 pub mod alert;
+pub mod browser;
 pub mod capture;
 pub mod database;
+pub mod http_proxy;
+pub mod indicator;
 pub mod market_data;
 pub mod watchlist;
 pub mod workspace;

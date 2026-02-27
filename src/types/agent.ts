@@ -22,6 +22,7 @@ export interface AgentCallbacks {
 export interface AgentOutput {
   content: string;
   messages: ChatMessage[];
+  switchTo?: string | 'lobby';
 }
 
 export interface Skill {

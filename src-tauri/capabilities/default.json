@@ -3,8 +3,11 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": ["main"],
+  "webviews": ["browser-panel"],
   "permissions": [
     "core:default",
+    "core:webview:default",
+    "core:event:default",
     "opener:default",
     "store:default",
     "notification:default"

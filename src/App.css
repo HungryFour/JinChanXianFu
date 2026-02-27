@@ -1,59 +1,74 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════
-   金蟾 · 仙侠交易殿 — 东方仙侠 RPG Theme
-   ═══════════════════════════════════════ */
+   金蟾 · 仙府 — 墨金暗夜 Dark Luxury Theme
+   ═════════════════════════════════════ */
 
 :root {
-  /* ── Abyss Backgrounds ── */
-  --bg-abyss: #080610;
-  --bg-deep: #0d0a18;
-  --bg-panel: #120e22;
-  --bg-card: #181330;
-  --bg-input: #1c1635;
-  --bg-hover: #221a40;
-  --bg-active: #281f4a;
+  /* ── Backgrounds (墨色深渊) ── */
+  --bg-abyss: #080b10;
+  --bg-deep: #0d1218;
+  --bg-panel: #101720;
+  --bg-card: #151d28;
+  --bg-input: #0c1118;
+  --bg-hover: rgba(201, 166, 85, 0.06);
+  --bg-active: rgba(201, 166, 85, 0.10);
 
-  /* ── Borders ── */
-  --border-dark: #261f42;
-  --border-mid: #362d58;
-  --border-gold: #c9a34f;
-  --border-gold-dim: #6b5a2e;
-  --border-gold-faint: #3d3220;
+  /* ── Borders (金丝暗纹) ── */
+  --border-dark: rgba(201, 166, 85, 0.08);
+  --border-mid: rgba(201, 166, 85, 0.15);
+  --border-gold: rgba(201, 166, 85, 0.30);
+  --border-gold-dim: rgba(201, 166, 85, 0.12);
+  --border-gold-faint: rgba(201, 166, 85, 0.06);
 
-  /* ── Imperial Gold ── */
-  --gold-50: #fdf6e3;
-  --gold-100: #f5e6c8;
-  --gold-200: #e8cc8a;
-  --gold-300: #d4a574;
-  --gold-400: #c9a34f;
-  --gold-500: #b08a2e;
-  --gold-glow: rgba(201, 163, 79, 0.12);
-  --gold-glow-strong: rgba(201, 163, 79, 0.25);
+  /* ── Antique Gold (古铜金 - 主色调) ── */
+  --gold-50: #fdf8ed;
+  --gold-100: #f5e6c0;
+  --gold-200: #e8cc8c;
+  --gold-300: #dbb978;
+  --gold-400: #c9a655;
+  --gold-500: #b08d3a;
+  --gold-glow: rgba(201, 166, 85, 0.15);
+  --gold-glow-strong: rgba(201, 166, 85, 0.30);
 
-  /* ── Jade Green ── */
-  --jade-400: #4a9070;
-  --jade-500: #3a7a5a;
-  --jade-glow: rgba(74, 144, 112, 0.18);
+  /* ── Jade (翡翠 - 辅色调) ── */
+  --jade-50: #e6f5f0;
+  --jade-100: #b3e0d4;
+  --jade-200: #80ccb8;
+  --jade-300: #5abeab;
+  --jade-400: #3da68e;
+  --jade-500: #2d8a74;
+  --jade-glow: rgba(61, 166, 142, 0.15);
+  --jade-glow-strong: rgba(61, 166, 142, 0.25);
 
-  /* ── Cinnabar Red ── */
-  --cinnabar-400: #d44040;
-  --cinnabar-500: #b83030;
+  /* ── 金蟾 Toad Gold (蟾宫金) ── */
+  --toad-gold-400: #d4a830;
+  --toad-gold-500: #c09428;
+  --toad-gold-glow: rgba(212, 168, 48, 0.20);
+  --toad-gold-glow-strong: rgba(212, 168, 48, 0.35);
 
-  /* ── Amber ── */
-  --amber-400: #d4a030;
-  --amber-glow: rgba(212, 160, 48, 0.18);
+  /* ── Gold Particles (金尘) ── */
+  --gold-particle: #e8c44a;
+  --gold-particle-glow: rgba(232, 196, 74, 0.5);
 
-  /* ── Mystic Blue ── */
-  --mystic-400: #5a8ad4;
-  --mystic-glow: rgba(90, 138, 212, 0.15);
+  /* ── Cinnabar Red (朱砂) ── */
+  --cinnabar-400: #d9534f;
+  --cinnabar-500: #c9433f;
 
-  /* ── Text ── */
-  --text-primary: #ede4d3;
-  --text-secondary: #a89880;
-  --text-dim: #6b5f4a;
-  --text-gold: #d4b074;
-  --text-jade: #6abf90;
+  /* ── Amber (琥珀) ── */
+  --amber-400: #e8a832;
+  --amber-glow: rgba(232, 168, 50, 0.18);
+
+  /* ── Mystic Blue (玄青) ── */
+  --mystic-400: #6b9fc4;
+  --mystic-glow: rgba(107, 159, 196, 0.15);
+
+  /* ── Text (墨韵) ── */
+  --text-primary: #ddd2c0;
+  --text-secondary: #9a8b78;
+  --text-dim: #5e5244;
+  --text-accent: #c9a655;
+  --text-jade: #5abeab;
 
   /* ── Typography ── */
   --font-display: 'ZCOOL XiaoWei', 'STKaiti', 'KaiTi', serif;
@@ -79,9 +94,10 @@ body {
 /* ── Atmospheric Background ── */
 .bg-realm {
   background:
-    radial-gradient(ellipse at 15% 50%, rgba(74, 144, 112, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 20%, rgba(201, 163, 79, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 90%, rgba(90, 70, 160, 0.04) 0%, transparent 40%),
+    radial-gradient(ellipse at 15% 85%, rgba(201, 166, 85, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 15%, rgba(180, 140, 60, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(61, 166, 142, 0.015) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 0%, rgba(201, 166, 85, 0.02) 0%, transparent 40%),
     var(--bg-abyss);
 }
 
@@ -94,17 +110,17 @@ body {
 .gold-shimmer {
   background: linear-gradient(
     90deg,
-    var(--gold-300) 0%,
-    var(--gold-50) 30%,
-    var(--gold-400) 50%,
-    var(--gold-50) 70%,
-    var(--gold-300) 100%
+    #b08d3a 0%,
+    #f5e6c0 25%,
+    #c9a655 50%,
+    #f5e6c0 75%,
+    #b08d3a 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: shimmer 5s ease-in-out infinite;
+  animation: shimmer 4s ease-in-out infinite;
 }
 
 /* ── Floating Gold Particles ── */
@@ -114,11 +130,11 @@ body {
     opacity: 0;
   }
   5% {
-    opacity: 0.7;
+    opacity: 0.6;
     transform: translateY(-5vh) translateX(0) scale(1);
   }
   95% {
-    opacity: 0.15;
+    opacity: 0.1;
   }
   100% {
     transform: translateY(-105vh) translateX(40px) scale(0.2);
@@ -130,8 +146,8 @@ body {
   position: fixed;
   border-radius: 50%;
   pointer-events: none;
-  background: var(--gold-400);
-  box-shadow: 0 0 6px var(--gold-glow-strong);
+  background: var(--gold-particle);
+  box-shadow: 0 0 6px var(--gold-particle-glow);
   animation: float-up var(--dur) linear infinite;
   animation-delay: var(--del);
   left: var(--x);
@@ -142,16 +158,16 @@ body {
 /* ── Ornate Corner Decorations ── */
 .ornate-corner {
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-style: solid;
-  opacity: 0.4;
+  opacity: 0.20;
   pointer-events: none;
 }
-.ornate-corner[data-pos="tl"] { top: 4px; left: 4px; border-width: 1.5px 0 0 1.5px; border-color: var(--border-gold); }
-.ornate-corner[data-pos="tr"] { top: 4px; right: 4px; border-width: 1.5px 1.5px 0 0; border-color: var(--border-gold); }
-.ornate-corner[data-pos="bl"] { bottom: 4px; left: 4px; border-width: 0 0 1.5px 1.5px; border-color: var(--border-gold); }
-.ornate-corner[data-pos="br"] { bottom: 4px; right: 4px; border-width: 0 1.5px 1.5px 0; border-color: var(--border-gold); }
+.ornate-corner[data-pos="tl"] { top: 4px; left: 4px; border-width: 1.5px 0 0 1.5px; border-color: var(--gold-400); }
+.ornate-corner[data-pos="tr"] { top: 4px; right: 4px; border-width: 1.5px 1.5px 0 0; border-color: var(--gold-400); }
+.ornate-corner[data-pos="bl"] { bottom: 4px; left: 4px; border-width: 0 0 1.5px 1.5px; border-color: var(--gold-400); }
+.ornate-corner[data-pos="br"] { bottom: 4px; right: 4px; border-width: 0 1.5px 1.5px 0; border-color: var(--gold-400); }
 
 /* ── Decorative Separator ── */
 .separator-ornate {
@@ -165,7 +181,7 @@ body {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-gold-dim), transparent);
+  background: linear-gradient(90deg, transparent, var(--border-mid), transparent);
 }
 
 /* ── Animated Status Dots ── */
@@ -177,7 +193,7 @@ body {
   0%, 100% { box-shadow: 0 0 3px var(--amber-glow); }
   50% { box-shadow: 0 0 8px var(--amber-400), 0 0 14px var(--amber-glow); }
 }
-@keyframes pulse-gold {
+@keyframes pulse-gold-dot {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
 }
@@ -199,15 +215,15 @@ body {
 /* ── Toad Breathing Glow ── */
 @keyframes toad-breathe {
   0%, 100% {
-    box-shadow: 0 0 12px var(--gold-glow), 0 0 24px rgba(201, 163, 79, 0.06);
+    box-shadow: 0 0 16px var(--toad-gold-glow), 0 0 32px rgba(212, 168, 48, 0.08);
   }
   50% {
-    box-shadow: 0 0 20px var(--gold-glow-strong), 0 0 40px rgba(201, 163, 79, 0.1);
+    box-shadow: 0 0 28px var(--toad-gold-glow-strong), 0 0 56px rgba(212, 168, 48, 0.15);
   }
 }
 @keyframes toad-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  50% { transform: translateY(-8px); }
 }
 
 /* ── Cursor Blink ── */
@@ -217,19 +233,18 @@ body {
 }
 
 /* ── Top Decorative Line ── */
-.top-golden-line {
+.top-jade-line {
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--border-gold-faint) 15%,
-    var(--border-gold-dim) 40%,
-    var(--border-gold) 50%,
-    var(--border-gold-dim) 60%,
-    var(--border-gold-faint) 85%,
+    rgba(201, 166, 85, 0.05) 15%,
+    rgba(201, 166, 85, 0.15) 40%,
+    rgba(201, 166, 85, 0.25) 50%,
+    rgba(201, 166, 85, 0.15) 60%,
+    rgba(201, 166, 85, 0.05) 85%,
     transparent 100%
   );
-  opacity: 0.6;
 }
 
 /* ── Task Item ── */
@@ -238,7 +253,7 @@ body {
   border-left: 2px solid transparent;
 }
 .task-item:hover {
-  border-left-color: var(--border-gold-dim);
+  border-left-color: var(--border-mid);
   background: var(--bg-hover);
 }
 .task-item.active {
@@ -246,7 +261,7 @@ body {
   background: var(--bg-active);
 }
 
-/* ── Input Game Style ── */
+/* ── Input ── */
 .input-realm {
   background: var(--bg-input);
   border: 1px solid var(--border-dark);
@@ -259,12 +274,12 @@ body {
 }
 .input-realm:focus {
   outline: none;
-  border-color: var(--border-gold-dim);
-  box-shadow: 0 0 0 1px var(--gold-glow), inset 0 0 20px rgba(201, 163, 79, 0.03);
+  border-color: var(--border-mid);
+  box-shadow: 0 0 0 1px var(--gold-glow), inset 0 0 20px rgba(201, 166, 85, 0.02);
 }
 
-/* ── Button Game Style ── */
-.btn-gold {
+/* ── Button Primary (Gold) ── */
+.btn-jade {
   background: linear-gradient(135deg, var(--gold-500), var(--gold-400));
   color: var(--bg-abyss);
   font-family: var(--font-display);
@@ -274,27 +289,27 @@ body {
   border: none;
   cursor: pointer;
 }
-.btn-gold:hover {
+.btn-jade:hover {
   background: linear-gradient(135deg, var(--gold-400), var(--gold-300));
-  box-shadow: 0 0 20px var(--gold-glow-strong);
+  box-shadow: 0 0 24px var(--gold-glow-strong);
 }
-.btn-gold:disabled {
+.btn-jade:disabled {
   opacity: 0.3;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-.btn-outline-gold {
+.btn-outline-jade {
   background: transparent;
-  border: 1px solid var(--border-gold-dim);
-  color: var(--text-gold);
+  border: 1px solid var(--border-mid);
+  color: var(--text-accent);
   font-family: var(--font-display);
   transition: all 0.2s ease;
   cursor: pointer;
 }
-.btn-outline-gold:hover {
+.btn-outline-jade:hover {
   border-color: var(--gold-400);
-  background: rgba(201, 163, 79, 0.06);
+  background: rgba(201, 166, 85, 0.06);
   box-shadow: 0 0 12px var(--gold-glow);
 }
 
@@ -302,20 +317,20 @@ body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-gold-dim);
+  background: var(--border-mid);
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--gold-400);
 }
 
-/* ── Markdown Prose Overrides ── */
+/* ── Markdown Prose ── */
 .prose {
   --tw-prose-body: var(--text-primary);
-  --tw-prose-headings: var(--text-gold);
-  --tw-prose-links: var(--gold-300);
-  --tw-prose-bold: var(--gold-100);
-  --tw-prose-code: var(--gold-200);
+  --tw-prose-headings: var(--text-accent);
+  --tw-prose-links: var(--gold-400);
+  --tw-prose-bold: var(--gold-300);
+  --tw-prose-code: var(--jade-300);
   --tw-prose-quotes: var(--text-secondary);
 }
 .prose pre {
@@ -324,7 +339,7 @@ body {
   border-radius: 0.5rem;
 }
 .prose code {
-  color: var(--gold-200);
+  color: var(--jade-300);
   font-size: 0.85em;
   font-family: var(--font-mono);
 }
@@ -341,22 +356,22 @@ body {
 }
 .prose th {
   background: var(--bg-panel);
-  color: var(--text-gold);
+  color: var(--text-accent);
   font-family: var(--font-display);
 }
 .prose a {
-  color: var(--gold-300);
-  text-decoration-color: var(--border-gold-dim);
+  color: var(--gold-400);
+  text-decoration-color: var(--border-mid);
 }
 .prose a:hover {
-  color: var(--gold-200);
+  color: var(--gold-300);
 }
 .prose blockquote {
-  border-left-color: var(--border-gold-dim);
+  border-left-color: var(--border-mid);
   color: var(--text-secondary);
 }
 .prose strong {
-  color: var(--gold-100);
+  color: var(--gold-300);
 }
 .prose hr {
   border-color: var(--border-dark);
@@ -367,7 +382,7 @@ body {
   content: '';
   position: fixed;
   inset: 0;
-  opacity: 0.015;
+  opacity: 0.018;
   pointer-events: none;
   z-index: 9999;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
@@ -401,4 +416,217 @@ body {
 @keyframes welcome-input {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes welcome-card {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Celestial Card (仙府卡片) ── */
+.card-celestial {
+  background: rgba(201, 166, 85, 0.03);
+  border: 1px solid rgba(201, 166, 85, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  animation: welcome-card 0.5s ease-out both;
+}
+.card-celestial:hover {
+  background: rgba(201, 166, 85, 0.08);
+  border-color: rgba(201, 166, 85, 0.20);
+  box-shadow: 0 4px 24px rgba(201, 166, 85, 0.08);
+  transform: translateY(-2px);
+}
+.card-celestial:active {
+  transform: translateY(0);
+}
+
+/* ── Glow Ring (仙府首页光环) ── */
+@keyframes glow-ring-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+}
+
+/* ── Chat Popover (聊天弹窗) ── */
+.chat-popover {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 320px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-mid);
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 20px var(--gold-glow);
+  z-index: 20;
+  overflow: hidden;
+}
+
+@keyframes chat-popover-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.95) translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1) translateX(0);
+  }
+}
+
+.chat-popover-msg {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 4px 0;
+}
+
+.chat-popover-role {
+  font-family: var(--font-display);
+  font-size: 10px;
+  flex-shrink: 0;
+  min-width: 36px;
+}
+
+.chat-popover-content {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+/* ── Ambient Mist (底部水墨雾气) ── */
+.mist-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(201, 166, 85, 0.02) 0%,
+    rgba(201, 166, 85, 0.01) 30%,
+    transparent 100%
+  );
+}
+
+/* ── Sidebar Scroll 卷轴样式 ── */
+.sidebar-scroll {
+  position: relative;
+  background:
+    /* 竹简横纹 */
+    repeating-linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent 22px,
+      rgba(201, 166, 85, 0.03) 22px,
+      rgba(201, 166, 85, 0.03) 23px
+    ),
+    /* 绸缎光泽 */
+    linear-gradient(135deg,
+      rgba(90, 68, 24, 0.08) 0%,
+      transparent 40%,
+      rgba(90, 68, 24, 0.05) 100%
+    ),
+    var(--bg-panel);
+}
+
+/* 轴杆 — 横向木质圆棍 */
+.scroll-rod {
+  position: relative;
+  height: 10px;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0px, transparent 8px,
+      rgba(201, 166, 85, 0.06) 8px, rgba(201, 166, 85, 0.06) 9px
+    ),
+    linear-gradient(180deg,
+      #3d2e12 0%, #6b5220 20%, #9a7d38 45%,
+      #b8943c 50%,
+      #9a7d38 55%, #6b5220 80%, #3d2e12 100%
+    );
+  border-top: 1px solid rgba(201, 166, 85, 0.3);
+  border-bottom: 1px solid rgba(40, 30, 10, 0.8);
+  border-radius: 5px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 230, 150, 0.15);
+  z-index: 3;
+}
+
+/* 左右轴头 — 圆球铜钮 */
+.scroll-rod::before,
+.scroll-rod::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%,
+    #d4b862 0%, #c9a655 25%, #8a6b28 65%, #5a4418 100%
+  );
+  border: 1px solid rgba(201, 166, 85, 0.45);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.6),
+    inset 0 1px 3px rgba(255, 230, 150, 0.3),
+    0 0 6px rgba(201, 166, 85, 0.15);
+  z-index: 4;
+}
+.scroll-rod::before { left: 0px; }
+.scroll-rod::after { right: 0px; }
+
+/* 卷轴主体 — 绢面/竹简 */
+.scroll-body {
+  border-left: 2px solid rgba(90, 68, 24, 0.2);
+  border-right: 2px solid rgba(90, 68, 24, 0.2);
+  box-shadow:
+    inset 6px 0 12px rgba(0, 0, 0, 0.1),
+    inset -6px 0 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Cloud Border 卷云边 ── */
+.cloud-border {
+  position: relative;
+  box-shadow: inset 0 0 40px rgba(201, 166, 85, 0.03);
+}
+
+/* 四边卷云纹 */
+.cloud-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='8' fill='none'%3E%3Cpath d='M0 1 Q15 8 30 1 Q45 8 60 1' stroke='rgba(201,166,85,0.1)' stroke-width='0.6'/%3E%3C/svg%3E") repeat-x left top,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='8' fill='none'%3E%3Cpath d='M0 7 Q15 0 30 7 Q45 0 60 7' stroke='rgba(201,166,85,0.1)' stroke-width='0.6'/%3E%3C/svg%3E") repeat-x left bottom,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='60' fill='none'%3E%3Cpath d='M1 0 Q8 15 1 30 Q8 45 1 60' stroke='rgba(201,166,85,0.1)' stroke-width='0.6'/%3E%3C/svg%3E") repeat-y left top,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='60' fill='none'%3E%3Cpath d='M7 0 Q0 15 7 30 Q0 45 7 60' stroke='rgba(201,166,85,0.1)' stroke-width='0.6'/%3E%3C/svg%3E") repeat-y right top;
+}
+
+/* 四角卷云角花 */
+.cloud-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' fill='none'%3E%3Cpath d='M2 34 L2 12 Q2 2 12 2 L34 2' stroke='rgba(201,166,85,0.2)' stroke-width='1'/%3E%3Cpath d='M10 10 Q10 6 14 6 Q18 6 18 10 Q18 14 14 14 Q10 14 10 10 Z' stroke='rgba(201,166,85,0.2)' stroke-width='0.8'/%3E%3Cpath d='M14 10 Q14 8 16 8' stroke='rgba(201,166,85,0.15)' stroke-width='0.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 4px 4px / 36px 36px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' fill='none'%3E%3Cpath d='M34 34 L34 12 Q34 2 24 2 L2 2' stroke='rgba(201,166,85,0.2)' stroke-width='1'/%3E%3Cpath d='M26 10 Q26 6 22 6 Q18 6 18 10 Q18 14 22 14 Q26 14 26 10 Z' stroke='rgba(201,166,85,0.2)' stroke-width='0.8'/%3E%3Cpath d='M22 10 Q22 8 20 8' stroke='rgba(201,166,85,0.15)' stroke-width='0.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat calc(100% - 4px) 4px / 36px 36px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' fill='none'%3E%3Cpath d='M2 2 L2 24 Q2 34 12 34 L34 34' stroke='rgba(201,166,85,0.2)' stroke-width='1'/%3E%3Cpath d='M10 26 Q10 30 14 30 Q18 30 18 26 Q18 22 14 22 Q10 22 10 26 Z' stroke='rgba(201,166,85,0.2)' stroke-width='0.8'/%3E%3Cpath d='M14 26 Q14 28 16 28' stroke='rgba(201,166,85,0.15)' stroke-width='0.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 4px calc(100% - 4px) / 36px 36px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' fill='none'%3E%3Cpath d='M34 2 L34 24 Q34 34 24 34 L2 34' stroke='rgba(201,166,85,0.2)' stroke-width='1'/%3E%3Cpath d='M26 26 Q26 30 22 30 Q18 30 18 26 Q18 22 22 22 Q26 22 26 26 Z' stroke='rgba(201,166,85,0.2)' stroke-width='0.8'/%3E%3Cpath d='M22 26 Q22 28 20 28' stroke='rgba(201,166,85,0.15)' stroke-width='0.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat calc(100% - 4px) calc(100% - 4px) / 36px 36px;
 }

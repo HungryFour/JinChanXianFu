@@ -238,6 +238,16 @@ pub fn get_messages(db: State<Arc<Database>>, task_id: String) -> Result<Vec<Mes
     Ok(messages)
 }
 
+// ── Clear Messages ──
+
+#[tauri::command]
+pub fn clear_messages(db: State<Arc<Database>>, task_id: String) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM message WHERE task_id = ?1", [&task_id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 // ── Plan Logs ──
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

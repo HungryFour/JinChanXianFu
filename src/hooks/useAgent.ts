@@ -5,6 +5,7 @@ import { runAgentLoop } from '../services/agent/agent-loop';
 import { buildContext, getActiveSkillNames } from '../services/agent/context-builder';
 import { toolRegistry } from '../services/agent/tool-registry';
 import { registerAllTools } from '../services/agent/tool-executors';
+import { loadAndRegisterAllAdapters } from '../services/agent/adapter-loader';
 import type { ChatMessage } from '../types/ai';
 
 let toolsInitialized = false;
@@ -15,6 +16,7 @@ export function useAgent() {
   useEffect(() => {
     if (!toolsInitialized) {
       registerAllTools();
+      loadAndRegisterAllAdapters();
       toolsInitialized = true;
     }
   }, []);
@@ -27,12 +29,11 @@ export function useAgent() {
       throw new Error('请先在设置中配置 API Key');
     }
 
+    // 大厅模式：使用 lobbyTaskId（不自动创建任务）
     let taskId = chatStore.activeTaskId;
-
     if (!taskId) {
-      const title = userInput.length > 20 ? userInput.slice(0, 20) + '...' : userInput;
-      const task = await chatStore.createTask(title);
-      taskId = task.id;
+      taskId = chatStore.lobbyTaskId;
+      if (!taskId) throw new Error('大厅未初始化');
     }
 
     await chatStore.addMessage(taskId, 'user', userInput);
@@ -46,6 +47,9 @@ export function useAgent() {
     chatStore.setStreaming(true);
     chatStore.setStreamingContent('');
     chatStore.clearToolExecutions();
+
+    const abortController = new AbortController();
+    abortRef.current = abortController;
 
     let finalContent = '';
 
@@ -77,6 +81,7 @@ export function useAgent() {
             });
           },
         },
+        abortController.signal,
       );
 
       finalContent = result.content;
@@ -84,7 +89,18 @@ export function useAgent() {
       if (finalContent) {
         await chatStore.addMessage(taskId, 'assistant', finalContent, modelConfig.model);
       }
+
+      // 处理任务切换
+      if (result.switchTo) {
+        if (result.switchTo === 'lobby') {
+          await chatStore.setActiveTask(null);
+        } else {
+          await chatStore.loadTasks();
+          await chatStore.setActiveTask(result.switchTo);
+        }
+      }
     } finally {
+      abortRef.current = null;
       chatStore.setStreaming(false);
       chatStore.setStreamingContent('');
     }
@@ -92,9 +108,25 @@ export function useAgent() {
     return finalContent;
   }, []);
 
-  const stopStreaming = useCallback(() => {
+  const stopStreaming = useCallback(async () => {
+    const chatStore = useChatStore.getState();
+    const partialContent = chatStore.streamingContent;
+
     abortRef.current?.abort();
-    useChatStore.getState().setStreaming(false);
+    abortRef.current = null;
+
+    // 保存已有内容 + 取消标注
+    let taskId = chatStore.activeTaskId || chatStore.lobbyTaskId;
+    if (taskId && partialContent) {
+      const cancelledContent = partialContent + '\n\n---\n*[修行者主动取消问道]*';
+      await chatStore.addMessage(taskId, 'assistant', cancelledContent);
+    } else if (taskId) {
+      await chatStore.addMessage(taskId, 'assistant', '*[修行者主动取消问道]*');
+    }
+
+    chatStore.setStreaming(false);
+    chatStore.setStreamingContent('');
+    chatStore.clearToolExecutions();
   }, []);
 
   return { sendMessage, stopStreaming };

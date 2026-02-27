@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6b5520"/>
+      <stop offset="50%" style="stop-color:#c9a34f"/>
+      <stop offset="100%" style="stop-color:#8a7028"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9a34f;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#c9a34f;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#c9a34f" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <!-- Outer glow -->
+  <circle cx="64" cy="64" r="62" fill="url(#glow)"/>
+  <!-- Main shape -->
+  <rect x="16" y="16" width="96" height="96" rx="24" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- Inner highlight -->
+  <rect x="17" y="17" width="94" height="47" rx="23" fill="white" opacity="0.08"/>
+  <!-- Character -->
+  <text x="64" y="78" text-anchor="middle" font-family="'Noto Serif SC', 'STSong', 'SimSun', serif" font-size="52" font-weight="700" fill="#0a0a12">蟾</text>
+  <!-- Gold coin dots -->
+  <circle cx="36" cy="100" r="3" fill="#c9a34f" opacity="0.5"/>
+  <circle cx="92" cy="100" r="3" fill="#c9a34f" opacity="0.5"/>
+  <circle cx="64" cy="106" r="2.5" fill="#c9a34f" opacity="0.4"/>
+</svg>

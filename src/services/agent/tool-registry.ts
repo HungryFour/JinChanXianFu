@@ -42,6 +42,14 @@ class ToolRegistry {
     }
     return result;
   }
+
+  unregister(name: string): boolean {
+    return this.tools.delete(name);
+  }
+
+  has(name: string): boolean {
+    return this.tools.has(name);
+  }
 }
 
 export const toolRegistry = new ToolRegistry();

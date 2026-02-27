@@ -84,3 +84,40 @@ pub struct CreateAlertRequest {
     pub alert_type: String,
     pub condition_json: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Indicator {
+    pub id: String,
+    pub name: String,
+    pub formula_source: String,
+    pub stock_symbols: Vec<String>,
+    pub task_id: Option<String>,
+    pub is_active: bool,
+    pub check_interval_secs: i64,
+    pub market_hours_only: bool,
+    pub last_checked: Option<String>,
+    pub last_signal: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CreateIndicatorRequest {
+    pub name: String,
+    pub formula_source: String,
+    pub stock_symbols: Vec<String>,
+    pub task_id: Option<String>,
+    pub check_interval_secs: Option<i64>,
+    pub market_hours_only: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdateIndicatorRequest {
+    pub name: Option<String>,
+    pub formula_source: Option<String>,
+    pub stock_symbols: Option<Vec<String>>,
+    pub task_id: Option<String>,
+    pub is_active: Option<bool>,
+    pub check_interval_secs: Option<i64>,
+    pub market_hours_only: Option<bool>,
+}

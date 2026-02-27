@@ -27,7 +27,7 @@ pub struct StockSearchResult {
 }
 
 /// 根据股票代码推断市场代码: 6开头→1(沪), 0/3开头→0(深)
-fn get_market_code(symbol: &str) -> &str {
+pub fn get_market_code(symbol: &str) -> &str {
     match symbol.chars().next() {
         Some('6') => "1",
         Some('0') | Some('3') => "0",

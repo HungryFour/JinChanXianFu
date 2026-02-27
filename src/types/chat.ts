@@ -1,4 +1,4 @@
-export type TaskType = 'manual' | 'scheduled' | 'monitor' | 'agent';
+export type TaskType = 'manual' | 'scheduled' | 'monitor' | 'agent' | 'lobby';
 export type TaskStatus = 'active' | 'paused' | 'completed';
 
 export interface Task {

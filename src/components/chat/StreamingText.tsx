@@ -12,9 +12,9 @@ export function StreamingText({ content }: StreamingTextProps) {
       <span
         className="inline-block w-[2px] h-[1em] ml-0.5 align-text-bottom"
         style={{
-          background: 'var(--gold-400)',
+          background: 'var(--gold-particle)',
           animation: 'cursor-blink 1s step-end infinite',
-          boxShadow: '0 0 4px var(--gold-glow-strong)',
+          boxShadow: '0 0 4px var(--gold-particle-glow)',
         }}
       />
     </div>

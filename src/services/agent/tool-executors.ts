@@ -1,6 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
 import { toolRegistry } from './tool-registry';
 import { useChatStore } from '../../stores/chatStore';
+import { useBrowserStore } from '../../stores/browserStore';
+import { setSecret, deleteSecret, listSecretKeys } from './secret-store';
+import {
+  registerAdapter,
+  unregisterAdapter,
+  getRegisteredAdapters,
+  type AdapterConfig,
+} from './adapter-loader';
+import { invalidateSkillsCache } from './context-builder';
 import type { ToolDefinition } from '../../types/ai';
 import type { AgentPlan } from '../../types/chat';
 
@@ -565,6 +574,605 @@ export function registerAllTools() {
       return JSON.stringify({ success: true, task_id: taskId, status: 'stopped' });
     },
     ['agent-plan'],
+  );
+
+  // ── 自升级：API 适配器管理 (skill: self-upgrade) ──
+
+  toolRegistry.register(
+    'manage_api_secret',
+    def('manage_api_secret', '管理 API 密钥（设置/删除/列出）。设置密钥后适配器可引用。list 操作只返回 key 名称，不泄露值', {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['set', 'delete', 'list'], description: '操作类型' },
+        key: { type: 'string', description: 'set/delete 时的密钥名称，如 tushare_token' },
+        value: { type: 'string', description: 'set 时的密钥值' },
+      },
+      required: ['action'],
+    }),
+    async (args) => {
+      const action = args.action as string;
+
+      if (action === 'list') {
+        const keys = await listSecretKeys();
+        return JSON.stringify({ keys });
+      }
+
+      if (action === 'set') {
+        if (!args.key || !args.value) {
+          return JSON.stringify({ error: 'set 操作需要 key 和 value 参数' });
+        }
+        await setSecret(args.key as string, args.value as string);
+        return JSON.stringify({ success: true, action: 'set', key: args.key });
+      }
+
+      if (action === 'delete') {
+        if (!args.key) {
+          return JSON.stringify({ error: 'delete 操作需要 key 参数' });
+        }
+        await deleteSecret(args.key as string);
+        return JSON.stringify({ success: true, action: 'delete', key: args.key });
+      }
+
+      return JSON.stringify({ error: `未知操作: ${action}` });
+    },
+    ['self-upgrade'],
+  );
+
+  toolRegistry.register(
+    'create_api_adapter',
+    def('create_api_adapter', '创建 API 适配器：写入声明式 JSON 配置 + 自动生成关联技能文件 + 立即注册工具。适用于对接第三方数据源 API', {
+      type: 'object',
+      properties: {
+        config: {
+          type: 'object',
+          description: '完整的适配器配置 JSON，包含 adapter（id/name/version/base_url）和 tools 数组（每个 tool 含 name/description/skill/parameters/request/response/secrets_needed）',
+        },
+      },
+      required: ['config'],
+    }),
+    async (args) => {
+      try {
+        const config = args.config as AdapterConfig;
+
+        // 1. 验证基本格式
+        if (!config.adapter?.id || !config.adapter?.name || !config.tools?.length) {
+          return JSON.stringify({ error: '适配器配置缺少必要字段: adapter.id, adapter.name, tools' });
+        }
+
+        const adapterId = config.adapter.id;
+
+        // 2. 写入适配器 JSON
+        await invoke('cmd_workspace_write', {
+          relativePath: `adapters/${adapterId}.json`,
+          content: JSON.stringify(config, null, 2),
+        });
+
+        // 3. 自动生成关联的 skill 文件
+        const toolNames = config.tools.map((t) => t.name);
+        const allKeywords = new Set<string>();
+        for (const tool of config.tools) {
+          // 从工具描述中提取关键词
+          allKeywords.add(adapterId);
+          allKeywords.add(config.adapter.name);
+          if (tool.skill) allKeywords.add(tool.skill);
+        }
+
+        const skillContent = `---
+name: ${adapterId}
+description: ${config.adapter.name}
+keywords: [${Array.from(allKeywords).join(', ')}]
+tools: [${toolNames.join(', ')}]
+---
+当用户提及${config.adapter.name}相关的查询时，使用以下工具获取数据：
+${config.tools.map((t) => `- ${t.name}: ${t.description}`).join('\n')}
+`;
+
+        await invoke('cmd_workspace_write', {
+          relativePath: `skills/on-demand/${adapterId}.md`,
+          content: skillContent,
+        });
+
+        // 4. 立即注册工具
+        await registerAdapter(adapterId);
+
+        // 5. 清除 skills 缓存使新技能生效
+        invalidateSkillsCache();
+
+        return JSON.stringify({
+          success: true,
+          adapter_id: adapterId,
+          adapter_name: config.adapter.name,
+          tools_registered: toolNames,
+          skill_created: `skills/on-demand/${adapterId}.md`,
+        });
+      } catch (err) {
+        return JSON.stringify({ error: `创建适配器失败: ${String(err)}` });
+      }
+    },
+    ['self-upgrade'],
+  );
+
+  toolRegistry.register(
+    'delete_api_adapter',
+    def('delete_api_adapter', '删除已安装的 API 适配器（移除配置文件 + 反注册工具 + 删除关联技能）', {
+      type: 'object',
+      properties: {
+        adapter_id: { type: 'string', description: '要删除的适配器 ID' },
+      },
+      required: ['adapter_id'],
+    }),
+    async (args) => {
+      const adapterId = args.adapter_id as string;
+
+      try {
+        // 1. 反注册工具
+        unregisterAdapter(adapterId);
+
+        // 2. 删除适配器 JSON（写空内容 → 用覆盖方式清理）
+        await invoke('cmd_workspace_write', {
+          relativePath: `adapters/${adapterId}.json`,
+          content: '',
+        });
+
+        // 3. 删除关联的 skill 文件
+        await invoke('cmd_workspace_write', {
+          relativePath: `skills/on-demand/${adapterId}.md`,
+          content: '',
+        });
+
+        // 4. 清除 skills 缓存
+        invalidateSkillsCache();
+
+        return JSON.stringify({ success: true, adapter_id: adapterId, status: 'deleted' });
+      } catch (err) {
+        return JSON.stringify({ error: `删除适配器失败: ${String(err)}` });
+      }
+    },
+    ['self-upgrade'],
+  );
+
+  toolRegistry.register(
+    'list_api_adapters',
+    def('list_api_adapters', '列出所有已安装的 API 适配器及其注册的工具', {
+      type: 'object',
+      properties: {},
+    }),
+    async () => {
+      const registered = getRegisteredAdapters();
+
+      // 同时读取磁盘上的适配器文件列表
+      let diskAdapters: string[] = [];
+      try {
+        const files = await invoke<string[]>('cmd_workspace_list', {
+          relativePath: 'adapters',
+        });
+        diskAdapters = files
+          .filter((f) => f.endsWith('.json'))
+          .map((f) => f.replace('.json', ''));
+      } catch {
+        // adapters 目录不存在
+      }
+
+      return JSON.stringify({
+        registered_adapters: registered,
+        disk_adapters: diskAdapters,
+        total: diskAdapters.length,
+      });
+    },
+    ['self-upgrade'],
+  );
+
+  toolRegistry.register(
+    'test_api_adapter',
+    def('test_api_adapter', '测试适配器中的某个工具是否能正常调用。传入工具名和测试参数，返回 API 调用结果', {
+      type: 'object',
+      properties: {
+        tool_name: { type: 'string', description: '要测试的工具名，如 tushare_daily_kline' },
+        test_args: { type: 'object', description: '测试用的参数对象' },
+      },
+      required: ['tool_name'],
+    }),
+    async (args) => {
+      const toolName = args.tool_name as string;
+      const testArgs = (args.test_args as Record<string, unknown>) || {};
+
+      // 直接通过 toolRegistry 执行
+      const toolCall = {
+        id: `test_${Date.now()}`,
+        type: 'function' as const,
+        function: {
+          name: toolName,
+          arguments: JSON.stringify(testArgs),
+        },
+      };
+
+      const result = await toolRegistry.executeTool(toolCall);
+
+      try {
+        const parsed = JSON.parse(result);
+        if (parsed.error) {
+          return JSON.stringify({ success: false, tool: toolName, error: parsed.error });
+        }
+        // 截断大响应用于展示
+        const preview = result.length > 2000 ? result.slice(0, 2000) + '...(已截断)' : result;
+        return JSON.stringify({ success: true, tool: toolName, preview });
+      } catch {
+        return JSON.stringify({ success: true, tool: toolName, raw: result.slice(0, 2000) });
+      }
+    },
+    ['self-upgrade'],
+  );
+
+  // ── TDX 指标监控 (skill: tdx-indicator) ──
+
+  toolRegistry.register(
+    'validate_tdx_formula',
+    def('validate_tdx_formula', '验证通达信（TDX）公式语法是否正确，返回输出变量、DRAWTEXT 数量和错误信息', {
+      type: 'object',
+      properties: {
+        source: { type: 'string', description: '通达信公式源代码' },
+      },
+      required: ['source'],
+    }),
+    async (args) => {
+      const result = await invoke('cmd_validate_tdx_formula', { source: args.source as string });
+      return JSON.stringify(result);
+    },
+    ['tdx-indicator'],
+  );
+
+  toolRegistry.register(
+    'add_tdx_indicator',
+    def('add_tdx_indicator', '添加 TDX 指标监控：指定公式和股票代码，当 DRAWTEXT 信号在最新 K 线上触发时自动提醒', {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '指标名称，如 "BBI金叉"' },
+        formula_source: { type: 'string', description: '通达信公式源代码（必须包含 DRAWTEXT）' },
+        stock_symbols: { type: 'array', items: { type: 'string' }, description: '监控的股票代码列表' },
+        check_interval_secs: { type: 'number', description: '检查间隔秒数，默认 60' },
+        market_hours_only: { type: 'boolean', description: '是否仅交易时间检查，默认 true' },
+      },
+      required: ['name', 'formula_source', 'stock_symbols'],
+    }),
+    async (args) => {
+      const taskId = useChatStore.getState().activeTaskId;
+      const indicator = await invoke('cmd_create_indicator', {
+        request: {
+          name: args.name as string,
+          formula_source: args.formula_source as string,
+          stock_symbols: args.stock_symbols as string[],
+          task_id: taskId || null,
+          check_interval_secs: (args.check_interval_secs as number) || 60,
+          market_hours_only: args.market_hours_only !== false,
+        },
+      });
+      return JSON.stringify(indicator);
+    },
+    ['tdx-indicator'],
+  );
+
+  toolRegistry.register(
+    'list_tdx_indicators',
+    def('list_tdx_indicators', '列出所有 TDX 指标监控', {
+      type: 'object',
+      properties: {},
+    }),
+    async () => {
+      const list = await invoke('cmd_list_indicators');
+      return JSON.stringify(list);
+    },
+    ['tdx-indicator'],
+  );
+
+  toolRegistry.register(
+    'update_tdx_indicator',
+    def('update_tdx_indicator', '更新 TDX 指标监控的配置（名称、公式、股票、启停等）', {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: '指标 ID' },
+        name: { type: 'string', description: '新名称' },
+        formula_source: { type: 'string', description: '新公式' },
+        stock_symbols: { type: 'array', items: { type: 'string' }, description: '新股票列表' },
+        is_active: { type: 'boolean', description: '是否启用' },
+        check_interval_secs: { type: 'number', description: '检查间隔秒数' },
+        market_hours_only: { type: 'boolean', description: '是否仅交易时间检查' },
+      },
+      required: ['id'],
+    }),
+    async (args) => {
+      const { id, ...rest } = args as Record<string, unknown>;
+      const result = await invoke('cmd_update_indicator', { id: id as string, request: rest });
+      return JSON.stringify(result);
+    },
+    ['tdx-indicator'],
+  );
+
+  toolRegistry.register(
+    'delete_tdx_indicator',
+    def('delete_tdx_indicator', '删除一个 TDX 指标监控', {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: '要删除的指标 ID' },
+      },
+      required: ['id'],
+    }),
+    async (args) => {
+      const result = await invoke('cmd_delete_indicator', { id: args.id as string });
+      return JSON.stringify(result);
+    },
+    ['tdx-indicator'],
+  );
+
+  toolRegistry.register(
+    'evaluate_tdx_indicator',
+    def('evaluate_tdx_indicator', '立即计算一次 TDX 指标，返回最新值和信号状态（用于调试和验证）', {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: '指标 ID' },
+      },
+      required: ['id'],
+    }),
+    async (args) => {
+      const result = await invoke('cmd_evaluate_indicator', { id: args.id as string });
+      return JSON.stringify(result);
+    },
+    ['tdx-indicator'],
+  );
+
+  // ── 内嵌浏览器 (skill: web-browser) ──
+
+  toolRegistry.register(
+    'browser_open',
+    def('browser_open', '打开内嵌浏览器并导航到指定 URL。浏览器打开后，用 browser_screenshot 查看页面内容', {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: '要打开的网页 URL，如 https://www.baidu.com' },
+      },
+      required: ['url'],
+    }),
+    async (args) => {
+      let url = args.url as string;
+      if (!url.startsWith('http')) url = 'https://' + url;
+      const store = useBrowserStore.getState();
+      await store.openBrowser(url, 0, 0, 100, 100);
+      return JSON.stringify({ success: true, url });
+    },
+    ['web-browser'],
+  );
+
+  toolRegistry.register(
+    'browser_navigate',
+    def('browser_navigate', '在已打开的浏览器中导航到新 URL', {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: '目标 URL' },
+      },
+      required: ['url'],
+    }),
+    async (args) => {
+      let url = args.url as string;
+      if (!url.startsWith('http')) url = 'https://' + url;
+      await useBrowserStore.getState().navigate(url);
+      return JSON.stringify({ success: true, url });
+    },
+    ['web-browser'],
+  );
+
+  toolRegistry.register(
+    'browser_screenshot',
+    def('browser_screenshot', '截取当前浏览器页面的截图。返回图片用于查看页面内容、确认操作结果', {
+      type: 'object',
+      properties: {},
+    }),
+    async () => {
+      const image = await useBrowserStore.getState().screenshot();
+      return JSON.stringify({ success: true, image });
+    },
+    ['web-browser'],
+  );
+
+  toolRegistry.register(
+    'browser_click',
+    def('browser_click', '点击页面上指定坐标位置的元素。坐标来自截图中观察到的元素位置', {
+      type: 'object',
+      properties: {
+        x: { type: 'number', description: '点击位置的 x 坐标（像素）' },
+        y: { type: 'number', description: '点击位置的 y 坐标（像素）' },
+      },
+      required: ['x', 'y'],
+    }),
+    async (args) => {
+      const x = args.x as number;
+      const y = args.y as number;
+      // 等待 __JC__ 初始化
+      await useBrowserStore.getState().execJs(
+        `(function(){ if(window.__JC__){ window.__JC__.clickAt(${x}, ${y}); } else { setTimeout(function(){ if(window.__JC__) window.__JC__.clickAt(${x}, ${y}); }, 100); } })()`
+      );
+      return JSON.stringify({ success: true, x, y });
+    },
+    ['web-browser'],
+  );
+
+  toolRegistry.register(
+    'browser_type',
+    def('browser_type', '在页面指定坐标位置的输入框中输入文本。先点击聚焦，再逐字输入', {
+      type: 'object',
+      properties: {
+        x: { type: 'number', description: '输入框的 x 坐标（像素）' },
+        y: { type: 'number', description: '输入框的 y 坐标（像素）' },
+        text: { type: 'string', description: '要输入的文本内容' },
+      },
+      required: ['x', 'y', 'text'],
+    }),
+    async (args) => {
+      const x = args.x as number;
+      const y = args.y as number;
+      const text = args.text as string;
+      // 等待 __JC__ 初始化
+      const safeText = JSON.stringify(text).replace(/'/g, "\\'");
+      await useBrowserStore.getState().execJs(
+        `(function(){ if(window.__JC__){ window.__JC__.typeAt(${x}, ${y}, ${safeText}); } else { setTimeout(function(){ if(window.__JC__) window.__JC__.typeAt(${x}, ${y}, ${safeText}); }, 100); } })()`
+      );
+      return JSON.stringify({ success: true, x, y, text });
+    },
+    ['web-browser'],
+  );
+
+  toolRegistry.register(
+    'browser_scroll',
+    def('browser_scroll', '滚动页面。方向支持 up/down/left/right', {
+      type: 'object',
+      properties: {
+        direction: { type: 'string', enum: ['up', 'down', 'left', 'right'], description: '滚动方向' },
+        amount: { type: 'number', description: '滚动量（单位约 100px），默认 3' },
+      },
+      required: ['direction'],
+    }),
+    async (args) => {
+      const direction = args.direction as string;
+      const amount = (args.amount as number) || 3;
+      await useBrowserStore.getState().execJs(
+        `window.__JC__.scrollPage(${JSON.stringify(direction)}, ${amount})`,
+      );
+      return JSON.stringify({ success: true, direction, amount });
+    },
+    ['web-browser'],
+  );
+
+  toolRegistry.register(
+    'browser_get_info',
+    def('browser_get_info', '获取当前浏览器状态（是否打开、当前 URL）', {
+      type: 'object',
+      properties: {},
+    }),
+    async () => {
+      const info = await invoke('cmd_browser_get_info');
+      return JSON.stringify(info);
+    },
+    ['web-browser'],
+  );
+
+  toolRegistry.register(
+    'browser_close',
+    def('browser_close', '关闭内嵌浏览器面板', {
+      type: 'object',
+      properties: {},
+    }),
+    async () => {
+      await useBrowserStore.getState().closeBrowser();
+      return JSON.stringify({ success: true });
+    },
+    ['web-browser'],
+  );
+
+  // ── 大厅管理工具 (skill: lobby-manager) ──
+
+  toolRegistry.register(
+    'lobby_create_task',
+    def('lobby_create_task', '创建一个新任务并自动切换到该任务', {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '任务标题' },
+        task_type: { type: 'string', enum: ['manual', 'monitor', 'agent'], description: '任务类型，默认 manual' },
+      },
+      required: ['title'],
+    }),
+    async (args) => {
+      const title = args.title as string;
+      const taskType = (args.task_type as string) || 'manual';
+      const task = await useChatStore.getState().createTask(title, taskType);
+      return `__switch_task__:${task.id}`;
+    },
+    ['lobby-manager'],
+  );
+
+  toolRegistry.register(
+    'lobby_list_tasks',
+    def('lobby_list_tasks', '列出所有任务及其状态', {
+      type: 'object',
+      properties: {},
+    }),
+    async () => {
+      const allTasks = await invoke<Array<{ id: string; title: string; task_type: string; status: string; created_at: string }>>('list_tasks');
+      const tasks = allTasks.filter((t) => t.task_type !== 'lobby');
+      return JSON.stringify(tasks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        type: t.task_type,
+        status: t.status,
+        created_at: t.created_at,
+      })));
+    },
+    ['lobby-manager'],
+  );
+
+  toolRegistry.register(
+    'lobby_switch_task',
+    def('lobby_switch_task', '切换到指定的任务', {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string', description: '要切换到的任务 ID' },
+      },
+      required: ['task_id'],
+    }),
+    async (args) => {
+      const taskId = args.task_id as string;
+      const tasks = useChatStore.getState().tasks;
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return JSON.stringify({ error: `任务 ${taskId} 不存在` });
+      return `__switch_task__:${taskId}`;
+    },
+    ['lobby-manager'],
+  );
+
+  toolRegistry.register(
+    'lobby_update_task',
+    def('lobby_update_task', '更新任务标题', {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string', description: '要更新的任务 ID' },
+        title: { type: 'string', description: '新标题' },
+      },
+      required: ['task_id', 'title'],
+    }),
+    async (args) => {
+      await invoke('update_task', {
+        id: args.task_id as string,
+        request: { title: args.title as string },
+      });
+      await useChatStore.getState().loadTasks();
+      return JSON.stringify({ success: true, task_id: args.task_id, title: args.title });
+    },
+    ['lobby-manager'],
+  );
+
+  toolRegistry.register(
+    'lobby_delete_task',
+    def('lobby_delete_task', '删除一个任务', {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string', description: '要删除的任务 ID' },
+      },
+      required: ['task_id'],
+    }),
+    async (args) => {
+      await invoke('delete_task', { id: args.task_id as string });
+      await useChatStore.getState().loadTasks();
+      return JSON.stringify({ success: true, task_id: args.task_id, action: 'deleted' });
+    },
+    ['lobby-manager'],
+  );
+
+  toolRegistry.register(
+    'lobby_back_to_lobby',
+    def('lobby_back_to_lobby', '从当前任务返回仙府', {
+      type: 'object',
+      properties: {},
+    }),
+    async () => {
+      return '__switch_task__:lobby';
+    },
+    ['lobby-manager'],
   );
 }
 

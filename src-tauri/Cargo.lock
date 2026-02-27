@@ -2405,6 +2405,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "image",
+ "once_cell",
  "reqwest 0.12.28",
  "rusqlite",
  "serde",

@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod services;
 
+use commands::browser::BrowserState;
 use db::Database;
 use services::scheduler::Scheduler;
 use std::sync::Arc;
@@ -27,6 +28,7 @@ pub fn run() {
             });
 
             app.manage(database);
+            app.manage(BrowserState::default());
 
             // 初始化 workspace 目录
             if let Err(e) = commands::workspace::init_workspace(app.handle()) {
@@ -44,6 +46,7 @@ pub fn run() {
             commands::database::create_message,
             commands::database::get_messages,
             commands::database::get_plan_logs,
+            commands::database::clear_messages,
             // 行情数据
             commands::market_data::cmd_fetch_stock_quote,
             commands::market_data::cmd_search_stocks,
@@ -67,6 +70,23 @@ pub fn run() {
             commands::capture::list_windows,
             commands::capture::capture_window,
             commands::capture::read_capture_base64,
+            // 通用 HTTP 代理
+            commands::http_proxy::cmd_http_request,
+            // 内嵌浏览器
+            commands::browser::cmd_browser_open,
+            commands::browser::cmd_browser_navigate,
+            commands::browser::cmd_browser_exec_js,
+            commands::browser::cmd_browser_screenshot,
+            commands::browser::cmd_browser_close,
+            commands::browser::cmd_browser_resize,
+            commands::browser::cmd_browser_get_info,
+            // TDX 指标
+            commands::indicator::cmd_validate_tdx_formula,
+            commands::indicator::cmd_create_indicator,
+            commands::indicator::cmd_list_indicators,
+            commands::indicator::cmd_update_indicator,
+            commands::indicator::cmd_delete_indicator,
+            commands::indicator::cmd_evaluate_indicator,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
