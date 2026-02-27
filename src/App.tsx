@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { BrowserPanel } from './components/browser/BrowserPanel';
 import { SettingsPanel } from './components/settings/SettingsPanel';
+import { GoldenParticles } from './components/GoldenParticles';
 import { useSettingsStore } from './stores/settingsStore';
 import { useChatStore } from './stores/chatStore';
 import { useBrowserStore } from './stores/browserStore';
@@ -11,12 +12,12 @@ import { startHeartbeat, stopHeartbeat } from './services/agent/heartbeat';
 function JadeParticles() {
   const particles = useMemo(
     () =>
-      Array.from({ length: 14 }, (_, i) => ({
+      Array.from({ length: 50 }, (_, i) => ({
         id: i,
-        x: `${5 + Math.random() * 90}%`,
-        dur: `${14 + Math.random() * 22}s`,
-        del: `${Math.random() * 20}s`,
-        size: 1 + Math.random() * 1.5,
+        x: `${Math.random() * 100}%`,
+        dur: `${20 + Math.random() * 30}s`,
+        del: `${Math.random() * 30}s`,
+        size: 0.8 + Math.random() * 2,
       })),
     [],
   );
@@ -68,6 +69,7 @@ function App() {
   return (
     <div className="noise-overlay bg-realm relative flex flex-col h-screen select-none">
       <JadeParticles />
+      <GoldenParticles />
 
       {/* Window drag region */}
       <div
@@ -79,7 +81,7 @@ function App() {
       {/* Main layout */}
       <div className="flex flex-1 min-h-0 relative" style={{ zIndex: 1 }}>
         <Sidebar />
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0 bg-realm">
           {/* Drag region for main area */}
           <div
             data-tauri-drag-region
@@ -87,13 +89,12 @@ function App() {
             style={{ height: '28px', minHeight: '28px' }}
           />
           <div className="flex-1 flex min-h-0">
-            <div className={isBrowserOpen ? 'w-1/2 flex flex-col min-h-0' : 'flex-1 flex flex-col min-h-0'}>
+            <div className={isBrowserOpen ? 'w-1/2 flex flex-col min-h-0 bg-realm' : 'flex-1 flex flex-col min-h-0 bg-realm'}>
               <ChatPanel />
             </div>
             {isBrowserOpen && (
               <div
-                className="w-1/2 flex flex-col min-h-0"
-                style={{ borderLeft: '1px solid var(--border-dark)' }}
+                className="w-1/2 flex flex-col min-h-0 bg-realm"
               >
                 <BrowserPanel />
               </div>

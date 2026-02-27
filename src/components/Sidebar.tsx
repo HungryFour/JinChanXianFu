@@ -8,6 +8,7 @@ import {
   Bot,
 } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
+import { SidebarParticles } from './SidebarParticles';
 import { useSettingsStore } from '../stores/settingsStore';
 import type { TaskType, TaskStatus } from '../types/chat';
 
@@ -56,10 +57,11 @@ export function Sidebar() {
     <div
       className="w-64 flex flex-col h-full shrink-0"
       style={{
-        background: 'var(--bg-panel)',
+        background: 'var(--bg-abyss)',
         borderRight: '1px solid var(--border-dark)',
       }}
     >
+      <SidebarParticles />
       {/* macOS traffic light spacing + drag region */}
       <div data-tauri-drag-region style={{ height: '38px', minHeight: '38px' }} className="shrink-0" />
 
@@ -67,26 +69,24 @@ export function Sidebar() {
       <div
         className="py-4 cursor-pointer transition-all"
         style={{
-          borderBottom: '1px solid var(--border-dark)',
-          background: isLobby ? 'var(--bg-active)' : 'transparent',
+          background: 'var(--bg-abyss)',
         }}
         onClick={() => setActiveTask(null)}
         onMouseEnter={(e) => {
           if (!isLobby) e.currentTarget.style.background = 'var(--bg-hover)';
         }}
         onMouseLeave={(e) => {
-          if (!isLobby) e.currentTarget.style.background = 'transparent';
+          if (!isLobby) e.currentTarget.style.background = 'var(--bg-abyss)';
         }}
       >
         <div className="flex flex-col items-center gap-2">
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, #6b5420, #9a7d38, #c9a655)',
+              background: 'var(--bg-abyss)',
               boxShadow: isLobby
-                ? '0 0 28px var(--toad-gold-glow-strong), 0 0 56px rgba(212,168,48,0.10), inset 0 1px 0 rgba(255,255,255,0.08)'
-                : '0 0 18px var(--toad-gold-glow), inset 0 1px 0 rgba(255,255,255,0.08)',
-              animation: isLobby ? 'toad-breathe 3s ease infinite' : undefined,
+                ? '0 0 12px var(--toad-gold-glow)'
+                : '0 0 8px var(--toad-gold-glow)',
             }}
           >
             <span
@@ -115,9 +115,9 @@ export function Sidebar() {
       </div>
 
       {/* Task list (卷轴) */}
-      <div className="sidebar-scroll flex-1 flex flex-col min-h-0">
+      <div className="sidebar-scroll flex-1 flex flex-col min-h-0" style={{ padding: '10px' }}>
       <div className="scroll-rod shrink-0" />
-      <div className="scroll-body flex-1 overflow-y-auto space-y-0.5" style={{ padding: '8px 20px' }}>
+      <div className="scroll-body flex-1 overflow-y-auto space-y-0.5" style={{ padding: '10px' }}>
         {tasks.length > 0 && (
           <div className="separator-ornate mb-3">
             <span className="text-[10px] tracking-[0.2em]" style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-display)' }}>

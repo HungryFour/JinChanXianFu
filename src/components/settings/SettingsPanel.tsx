@@ -23,7 +23,7 @@ export function SettingsPanel() {
         className="w-full max-w-md mx-4 rounded-xl relative overflow-hidden"
         style={{
           background: 'var(--bg-panel)',
-          border: '1px solid var(--border-dark)',
+          border: 'none',
           boxShadow: '0 8px 40px rgba(0, 0, 0, 0.4), 0 0 80px var(--gold-glow)',
           animation: 'modal-in 0.3s ease',
         }}
@@ -37,7 +37,7 @@ export function SettingsPanel() {
         {/* Header */}
         <div
           className="flex items-center justify-between px-6 py-4"
-          style={{ borderBottom: '1px solid var(--border-dark)' }}
+          style={{ borderBottom: 'none' }}
         >
           <h2
             className="gold-shimmer text-lg"
@@ -164,7 +164,7 @@ export function SettingsPanel() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4" style={{ borderTop: '1px solid var(--border-dark)' }}>
+        <div className="px-6 py-4" style={{ borderTop: 'none' }}>
           <button
             onClick={() => setSettingsOpen(false)}
             className="btn-jade w-full py-2.5 rounded-lg text-sm"

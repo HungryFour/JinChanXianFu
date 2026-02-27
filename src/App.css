@@ -44,6 +44,7 @@
   /* ── 金蟾 Toad Gold (蟾宫金) ── */
   --toad-gold-400: #d4a830;
   --toad-gold-500: #c09428;
+  --toad-gold-600: #4a3510;
   --toad-gold-glow: rgba(212, 168, 48, 0.20);
   --toad-gold-glow-strong: rgba(212, 168, 48, 0.35);
 
@@ -129,16 +130,28 @@ body {
     transform: translateY(0) translateX(0) scale(0);
     opacity: 0;
   }
-  5% {
-    opacity: 0.6;
-    transform: translateY(-5vh) translateX(0) scale(1);
+  10% {
+    opacity: 0.8;
+    transform: translateY(-10vh) translateX(5px) scale(1);
   }
-  95% {
-    opacity: 0.1;
+  90% {
+    opacity: 0.2;
+    transform: translateY(-90vh) translateX(30px) scale(0.8);
   }
   100% {
-    transform: translateY(-105vh) translateX(40px) scale(0.2);
+    transform: translateY(-105vh) translateX(50px) scale(0.3);
     opacity: 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
   }
 }
 
@@ -147,12 +160,15 @@ body {
   border-radius: 50%;
   pointer-events: none;
   background: var(--gold-particle);
-  box-shadow: 0 0 6px var(--gold-particle-glow);
+  box-shadow:
+    0 0 8px var(--gold-particle-glow),
+    0 0 12px rgba(232, 196, 74, 0.3);
   animation: float-up var(--dur) linear infinite;
   animation-delay: var(--del);
   left: var(--x);
   bottom: -10px;
   z-index: 0;
+  opacity: 0.6;
 }
 
 /* ── Ornate Corner Decorations ── */
@@ -351,7 +367,7 @@ body {
 }
 .prose th,
 .prose td {
-  border: 1px solid var(--border-dark);
+  border: none;
   padding: 0.5rem 0.75rem;
 }
 .prose th {
@@ -539,7 +555,7 @@ body {
       transparent 40%,
       rgba(90, 68, 24, 0.05) 100%
     ),
-    var(--bg-panel);
+    var(--bg-abyss);
 }
 
 /* 轴杆 — 横向木质圆棍 */

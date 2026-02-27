@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, ArrowRight, RotateCw, X, Globe } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, X, Globe, ExternalLink } from 'lucide-react';
 import { useBrowserStore } from '../../stores/browserStore';
 
 function BrowserToolbar() {
@@ -18,6 +18,27 @@ function BrowserToolbar() {
       if (url) navigate(url);
     }
   };
+
+  // 处理外部链接点击
+  const handleExternalLink = useCallback((url: string) => {
+    // 检查是否是外部链接
+    try {
+      const linkUrl = new URL(url);
+      const currentUrl = new URL(currentUrl);
+
+      // 如果是不同域名或者包含 target="_blank"
+      if (linkUrl.hostname !== currentUrl.hostname || url.includes('target="_blank"')) {
+        // 使用系统默认浏览器打开
+        window.__TAURI__ ?
+          window.__TAURI__.shell.open(url) :
+          window.open(url, '_blank');
+        return true;
+      }
+    } catch (error) {
+      console.error('Invalid URL:', url);
+    }
+    return false;
+  }, [currentUrl]);
 
   return (
     <div
@@ -59,7 +80,6 @@ function BrowserToolbar() {
         className="flex-1 flex items-center gap-1.5 rounded px-2 h-6 text-xs"
         style={{
           background: 'var(--bg-abyss)',
-          border: '1px solid var(--border-dark)',
           color: 'var(--text-secondary)',
         }}
       >
@@ -114,14 +134,74 @@ export function BrowserPanel() {
     // 窗口缩放
     window.addEventListener('resize', syncPosition);
 
+    // 注入 JavaScript 处理链接点击
+    const handleLinks = () => {
+      if (!currentUrl) return;
+
+      const jsCode = `
+        (function() {
+          const handleLinkClick = (e) => {
+            const link = e.target.closest('a');
+            if (!link) return;
+
+            const url = link.href;
+            const target = link.target || '';
+
+            // 检查是否应该在新标签页打开
+            if (target === '_blank' || link.getAttribute('target') === '_blank') {
+              e.preventDefault();
+              e.stopPropagation();
+
+              // 使用 Tauri opener 打开外部链接
+              if (window.__TAURI__) {
+                window.__TAURI__.open(url).catch(err => {
+                  console.error('Failed to open URL:', err);
+                });
+              } else {
+                // 回退到 window.open
+                window.open(url, '_blank');
+              }
+            }
+          };
+
+          // 移除旧的事件监听器
+          document.removeEventListener('click', handleLinkClick, true);
+
+          // 添加新的事件监听器
+          document.addEventListener('click', handleLinkClick, true);
+        })();
+      `;
+
+      execJs(jsCode).catch(err => {
+        console.error('Failed to inject click handler:', err);
+      });
+    };
+
+    // 导航完成后注入脚本
+    if (currentUrl && !isLoading) {
+      setTimeout(handleLinks, 1000); // 等待页面加载完成
+
+      // 监听导航事件，在每次页面加载后重新注入脚本
+      const navigationHandler = () => {
+        setTimeout(handleLinks, 1500);
+      };
+
+      // 监听页面加载完成事件
+      document.addEventListener('load', navigationHandler, true);
+
+      return () => {
+        document.removeEventListener('load', navigationHandler, true);
+      };
+    }
+
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', syncPosition);
     };
-  }, [isOpen, syncPosition]);
+  }, [isOpen, syncPosition, currentUrl, isLoading, execJs]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="cloud-border flex flex-col h-full">
       <BrowserToolbar />
       {/* Placeholder for native webview */}
       <div

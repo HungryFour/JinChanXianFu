@@ -5,6 +5,7 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useAgent } from '../../hooks/useAgent';
 import { MessageBubble } from './MessageBubble';
 import { StreamingText } from './StreamingText';
+import { ChatParticles } from './ChatParticles';
 import type { ToolExecution } from '../../types/ai';
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
@@ -98,7 +99,7 @@ function ToolExecutionIndicator({ executions }: { executions: ToolExecution[] })
           className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg"
           style={{
             background: 'rgba(201, 166, 85, 0.04)',
-            border: '1px solid rgba(201, 166, 85, 0.08)',
+            border: 'none',
           }}
         >
           <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
@@ -133,7 +134,7 @@ function ToadAvatar({ glowing }: { glowing?: boolean }) {
     <div
       className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
       style={{
-        background: 'linear-gradient(135deg, #6b5420, #9a7d38, #c9a655)',
+        background: 'linear-gradient(135deg, var(--toad-gold-500), var(--toad-gold-400), var(--gold-400))',
         boxShadow: glowing
           ? '0 0 28px var(--toad-gold-glow-strong), 0 0 56px rgba(212, 168, 48, 0.10)'
           : '0 0 14px var(--toad-gold-glow)',
@@ -202,11 +203,15 @@ export function ChatPanel() {
 
   return (
     <div className="cloud-border flex-1 flex flex-col min-h-0">
+      <ChatParticles />
       {/* 仙府标识 */}
       {isLobby && (
         <div
           className="flex items-center gap-2.5 px-5 py-2"
-          style={{ borderBottom: '1px solid var(--border-dark)' }}
+          style={{
+            background: 'var(--bg-abyss)',
+            boxShadow: '0 0 8px var(--toad-gold-glow)'
+          }}
         >
           <ToadAvatar />
           <div className="flex-1">
@@ -255,8 +260,8 @@ export function ChatPanel() {
                 <div
                   className="rounded-xl px-4 py-3"
                   style={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border-dark)',
+                    background: 'var(--bg-abyss)',
+                    border: 'none',
                     borderLeftColor: 'var(--border-mid)',
                     borderLeftWidth: '2px',
                   }}
@@ -267,8 +272,8 @@ export function ChatPanel() {
                 <div
                   className="rounded-xl px-4 py-3"
                   style={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border-dark)',
+                    background: 'var(--bg-abyss)',
+                    border: 'none',
                   }}
                 >
                   <div className="flex items-center gap-2.5">
@@ -318,7 +323,7 @@ export function ChatPanel() {
       </div>
 
       {/* Input area */}
-      <div className="px-5 py-3" style={{ borderTop: '1px solid var(--border-dark)' }}>
+      <div className="px-5 py-3" style={{ borderTop: 'none' }}>
         {error && (
           <p className="mb-2 text-xs" style={{ color: 'var(--cinnabar-400)' }}>
             {error}

@@ -53,7 +53,7 @@ function ChatPopover({
       {/* Header */}
       <div
         className="flex items-center justify-between px-3 py-2"
-        style={{ borderBottom: '1px solid var(--border-dark)' }}
+        style={{ borderBottom: 'none' }}
       >
         <span
           className="text-xs tracking-wide"
@@ -224,13 +224,12 @@ export function XianFuHall() {
             <div
               className="rounded-xl overflow-hidden"
               style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-dark)',
+                background: 'var(--bg-abyss)'
               }}
             >
               <div
                 className="flex items-center gap-2 px-4 py-2.5"
-                style={{ borderBottom: '1px solid var(--border-dark)' }}
+                style={{ borderBottom: 'none' }}
               >
                 <Star size={14} style={{ color: 'var(--gold-400)' }} strokeWidth={1.5} />
                 <span
@@ -272,13 +271,12 @@ export function XianFuHall() {
             <div
               className="rounded-xl overflow-hidden"
               style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-dark)',
+                background: 'var(--bg-abyss)'
               }}
             >
               <div
                 className="flex items-center gap-2 px-4 py-2.5"
-                style={{ borderBottom: '1px solid var(--border-dark)' }}
+                style={{ borderBottom: 'none' }}
               >
                 <Wand2 size={14} style={{ color: 'var(--jade-400)' }} strokeWidth={1.5} />
                 <span
@@ -341,7 +339,7 @@ export function XianFuHall() {
               <div
                 className="w-[80px] h-[80px] rounded-2xl flex items-center justify-center relative"
                 style={{
-                  background: 'linear-gradient(145deg, #5a4418, #8a6b20, #c9a655)',
+                  background: 'linear-gradient(145deg, var(--toad-gold-600), var(--toad-gold-500), var(--gold-400))',
                   boxShadow:
                     '0 0 40px var(--toad-gold-glow-strong), 0 0 80px rgba(212,168,48,0.10), inset 0 1px 0 rgba(255,255,255,0.08)',
                   animation: 'toad-float 5s ease-in-out infinite, toad-breathe 3s ease infinite',
@@ -370,7 +368,7 @@ export function XianFuHall() {
                 onClick={() => setChatOpen((v) => !v)}
                 className="absolute -top-2 -right-8 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
                 style={{
-                  background: 'var(--bg-card)',
+                  background: 'var(--bg-abyss)',
                   border: '1px solid var(--border-mid)',
                   boxShadow: chatOpen
                     ? '0 0 12px var(--gold-glow-strong)'

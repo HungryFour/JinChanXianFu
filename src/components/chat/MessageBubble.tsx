@@ -24,7 +24,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
           style={{
             background: 'rgba(201, 166, 85, 0.08)',
-            border: '1px solid var(--border-dark)',
+            border: 'none',
           }}
         >
           <span
@@ -41,7 +41,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <div
           className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, #6b5420, #9a7d38, #c9a655)',
+            background: 'linear-gradient(135deg, var(--toad-gold-500), var(--toad-gold-400), var(--gold-400))',
             boxShadow: '0 0 14px var(--toad-gold-glow)',
           }}
         >
@@ -65,11 +65,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           isUser
             ? {
                 background: 'rgba(201, 166, 85, 0.06)',
-                border: '1px solid var(--border-dark)',
+                border: 'none',
               }
             : {
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-dark)',
+                background: 'var(--bg-abyss)',
+                border: 'none',
                 borderLeftColor: 'var(--border-mid)',
                 borderLeftWidth: '2px',
               }
